@@ -1,0 +1,5 @@
+MAILTO=""
+
+# m h  dom mon dow   command
+# run once a minute, (re)starts the culler.
+* * * * * root cd /etc/jupyterhub; sudo bash /etc/jupyterhub/cull_script_runner.sh 2>&1

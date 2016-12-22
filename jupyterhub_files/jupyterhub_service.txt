@@ -1,0 +1,58 @@
+#! /bin/sh
+# chkconfig: 2345 20 80
+### BEGIN INIT INFO
+# Provides:          jupyterhub
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: Start jupyterhub
+# Description:       This file should be used to construct scripts to be
+#                    placed in /etc/init.d.
+### END INIT INFO
+
+# PATH should only include /usr/* if it runs after the mountnfs.sh script
+PATH=/sbin:/usr/sbin:/bin:/usr/bin:/usr/local/bin
+
+prog="jupyterhub"
+unshare=/usr/bin/unshare
+exec="/usr/local/bin/$prog"
+pidfile="/var/run/$prog.pid"
+lockfile="/var/lock/subsys/$prog"
+logfile="/var/log/$prog"
+daemon_args="-f /etc/jupyterhub/jupyterhub_config.py"
+
+. /etc/init.d/functions
+
+do_start()
+{
+    cd /etc/jupyterhub
+    daemon nohup $exec $daemon_args > $logfile 2>&1 &
+    echo $! > $pidfile
+}
+
+do_stop()
+{
+    sudo pkill $prog
+    return "$?"
+}
+
+case "$1" in
+  start)
+    echo "Starting $prog"
+    do_start
+    exit 0
+    ;;
+  stop)
+    echo "Stopping $prog"
+    do_stop
+    exit 0
+    ;;
+  status)
+    status -p "$pidfile" && exit 0 || exit $?
+    ;;
+  *)
+    echo "Usage: $SCRIPTNAME {start|stop|status|restart}" >&2
+    exit 3
+    ;;
+esac
