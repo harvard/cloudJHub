@@ -4,7 +4,9 @@ boto3
 python-dateutil
 escapism
 cronutils
-oauthenticator
-jupyterhub-ldapauthenticator
 fabric3
 pytz
+
+# optional; as needed for authentication
+oauthenticator
+jupyterhub-ldapauthenticator

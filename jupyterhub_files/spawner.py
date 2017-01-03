@@ -76,13 +76,8 @@ def retry(function, *args, **kwargs):
             ret = yield thread_pool.submit(function, *args, **kwargs)
             return ret
         except (ClientError, WaiterError, NetworkError, RemoteCmdExecutionError, EOFError, SSHException, ChannelException) as e:
-            #EOFError occurs as part of a complex bug in fabric...
+            #EOFError can occur in fabric
             logger.error("Failure in %s with args %s and kwargs %s" % (function.__name__, args, kwargs))
-            # if isinstance(e, RemoteCmdExecutionError):
-            #     if "abort-on-prompts was set to True" in str(e):
-            #         logger.error(str(e))
-            #         yield gen.sleep(0.1)
-            #         raise Exception("server is misconfigured, cannot recover, remove that server")
             logger.info("retrying %s, (~%s seconds elapsed)" % (function.__name__, attempt * 3))
             yield gen.sleep(timeout)
     else:
@@ -90,21 +85,24 @@ def retry(function, *args, **kwargs):
         yield gen.sleep(0.1) #this line exists to allow the logger time to print
         raise e
 
-#################################################################################################
-# WARNINGS:
-# When debugging the InstanceSpawner the logger can be terminated (or something) before
-# the content is printed.  If your stack traces do not match up with your log statements
-# insert a sleep(0.5) into the code you are trying to investigate to allow the log time to flush.
+#########################################################################################################
+#########################################################################################################
 
 class InstanceSpawner(Spawner):
     """ A Spawner that starts an EC2 instance for each user.
-        self.user.server.ip and self.user.server.port are set multiple times to avoid encountered edge cases
-        where they are not set in Jupyterhub v0.6.1, potentially due to a race condition.
-        An improvement is made in currently unreleased Jupyterhub v0.7.0 where they are explicitly set.
-        Warning:
-            Because of db.commit() calls between yield calls in jupyterhub.user.spawn(), setting an attribute
-            on self.user.server results in ORM calls and incomplete jupyterhub.sqlite Server entries. Be careful
-            of setting self.user.server attributes too early in this spawner.start().
+
+        Warnings:
+            - Because of db.commit() calls within Jupyterhub's code between yield calls in jupyterhub.user.spawn(),
+            setting an attribute on self.user.server results in ORM calls and incomplete jupyterhub.sqlite Server
+            entries. Be careful of setting self.user.server attributes too early in this spawner.start().
+
+            In this spawner's start(), self.user.server.ip and self.user.server.port are set immediately before the
+            return statement to alleviate the edge case where they are not always set in Jupyterhub v0.6.1. An
+            improvement is made in developmental version Jupyterhub v0.7.0 where they are explicitly set.
+
+            - It's possible for the logger to be terminated before log is printed. If your stack traces do not match up
+            with your log statements, insert a brief sleep into the code where your are logging to allow time for log to
+            flush.
         """
     
     @gen.coroutine
@@ -199,6 +197,7 @@ class InstanceSpawner(Spawner):
             return "Instance not found/tracked"
     
     ################################################################################################################
+    ### helpers ###
 
     @gen.coroutine
     def is_notebook_running(self, ip_address_string, attempts=1):
@@ -209,16 +208,9 @@ class InstanceSpawner(Spawner):
             for i in range(attempts):
                 self.log.debug("function check_notebook_running for user %s, attempt %s..." % (self.user.name, i+1))
                 output = yield run("ps -ef | grep jupyterhub-singleuser")
-                #Notes on the logic here, if we do...
-                # ps -ef | grep [j]upyterhub-singleuser, grep can fail with a non-zero exit code if it finds no match.
-                #   We could configure the fabric settings for this one to just warn, but that would interfere due to
-                #   the global nature of fabric settings if the section that calls is_notebook running is right next
-                #   to other fabric commmands.
-                # ps -ef | grep -c jupyterhub-singleuser, we encounter the common case where is_notebook_running
-                #   has been called frequently, the grep hangs around for a few moments, so we get false positives.
-                #So,
-                # ps -ef | grep jupyterhub-singleuser   <--  ensures we match against at least ourselves and then
-                #   we look for another identifying value in the command line statement to start jupyternotebook.
+                #Notes on other remote cmds that were problematic
+                # ps -ef | grep [j]upyterhub-singleuser: grep can fail with a non-zero exit code if it finds no match.
+                # ps -ef | grep -c jupyterhub-singleuser: false positives can occur from other calls to this method.
                 for line in output.splitlines(): #
                     if "jupyter-hub-token" in line and "jupyterhub-singleuser" in line:
                         self.log.debug("the following notebook is definitely running:")
@@ -272,18 +264,6 @@ class InstanceSpawner(Spawner):
         try:
             # Wait for server to finish booting...
             yield self.wait_until_SSHable(instance.private_ip_address)
-            # with settings(**FABRIC_DEFAULTS, host_string=instance.private_ip_address):
-            #     #TODO: extremely low priority - unhandled case - when the mnt volume is unformatted
-            #     if new_server: # format filesystem on new EBS volume
-            #         self.log.info("first run, creating ebs for user %s" % self.user.name)
-            #         yield sudo("mkfs -t ext4 /dev/xvdf")
-            #     self.log.debug("checking mounts for user %s" % self.user.name)
-            #     # We need to check if the user EBS is already mounted
-            #     # Note: do not make this "mount | grep /dev/xvdf", that causes
-            #     # non-zero exit code problems when /dev/xvdf is not mounted.
-            #     output = yield sudo("mount")
-            #     if "/dev/xvdf on /mnt" not in output:
-            #         yield sudo("mount -t ext4 /dev/xvdf /mnt")
             #start notebook
             self.log.error("\n\n\n\nabout to check if notebook is running before launching\n\n\n\n")
             notebook_running = yield self.is_notebook_running(instance.private_ip_address)
@@ -325,7 +305,7 @@ class InstanceSpawner(Spawner):
         ec2 = boto3.client("ec2", region_name=SERVER_PARAMS["REGION"])
         resource = boto3.resource("ec2", region_name=SERVER_PARAMS["REGION"])
         boot_drive = {'DeviceName': '/dev/sda1',  # this is to be the boot drive
-                      'Ebs': {'VolumeSize': 3,  # size in gigabytes
+                      'Ebs': {'VolumeSize': SERVER_PARAMS["WORKER_EBS_SIZE"],  # size in gigabytes
                               'DeleteOnTermination': True,
                               'VolumeType': 'gp2',  # This means General Purpose SSD
                               # 'Iops': 1000 }  # i/o speed for storage, default is 100, more is faster
@@ -345,17 +325,6 @@ class InstanceSpawner(Spawner):
         )
         instance_id = reservation["Instances"][0]["InstanceId"]
         instance = yield retry(resource.Instance, instance_id)
-        # # create new ebs volume
-        # reservation2 = yield retry(
-        #         ec2.create_volume,
-        #         Size=1,  # 3 GB storage for users, half of which is taken up by system files
-        #         AvailabilityZone=SERVER_PARAMS["AVAILABILITY_ZONE"],
-        #         VolumeType='gp2',
-        # )
-        # ebs_volume_id = reservation2["VolumeId"]
-        # ebs_volume = resource.Volume(ebs_volume_id)
-        # track new server
-        # Server.new_server(instance_id, self.user.name, ebs_volume_id)
         Server.new_server(instance_id, self.user.name)
         yield retry(instance.wait_until_exists)
         # add server tags; tags cannot be added until server exists
@@ -364,12 +333,4 @@ class InstanceSpawner(Spawner):
         # start server
         # blocking calls should be wrapped in a Future
         yield retry(instance.wait_until_running)
-        # attach ebs volume
-        # yield retry(
-        #         instance.attach_volume,
-        #         VolumeId=ebs_volume_id,
-        #         Device='/dev/sdf'
-        # )
-        # add tag to EBS volume
-        # yield retry(ebs_volume.create_tags, Tags=[{"Key": "User", "Value": self.user.name}])
         return instance

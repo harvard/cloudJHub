@@ -31,10 +31,8 @@ logging.basicConfig(level=logging.INFO)
 logging.getLogger('boto3').setLevel(logging.WARNING)
 logging.getLogger('botocore').setLevel(logging.WARNING)
 
-
 with open("launch_cluster/instance_config.json", "r") as f:
     CONFIG_DEFAULTS = json.load(f)
-
 
 class RemoteCmdExecutionError(Exception): pass
 
@@ -42,10 +40,10 @@ class RemoteCmdExecutionError(Exception): pass
 env.abort_exception = RemoteCmdExecutionError
 env.abort_on_prompts = True
 
-#####################################################################################################################
 
 def launch_manager(config):
-    """ Refer to README.md """
+    """ Creates security groups, Jupyterhub manager, and worker AMI. Refer to README.md for details on what the
+        launch script does. """
     
     validate_config()
     logger.info("collecting AWS resources")
@@ -102,6 +100,7 @@ def launch_manager(config):
         "KEY_NAME": KEY_NAME,
         "JUPYTER_CLUSTER": config.cluster_name,
         "INSTANCE_TYPE": config.worker_instance_type,
+        "WORKER_EBS_SIZE": config.worker_ebs_size,
         "SUBNET_ID": config.private_subnet_id,
         "JUPYTER_NOTEBOOK_TIMEOUT": int(config.jupyter_notebook_timeout),
         "JUPYTER_MANAGER_IP": instance.public_ip_address,
@@ -111,7 +110,7 @@ def launch_manager(config):
     # Setup the common files and settings between manager and worker.
     setup_manager(server_params, instance.private_ip_address)
 
-    # Close port 22 on manager security group
+    # For security, close port 22 on manager security group to prevent SSH access to manager host
     # logger.info("Closing port 22 on manager")
     # manager_security_group.revoke_ingress(
     #         FromPort=22, ToPort=22, IpProtocol="TCP", CidrIp="0.0.0.0/0"
@@ -163,7 +162,7 @@ def setup_manager(server_params, manager_ip_address):
 
 def make_worker_ami(config, ec2, security_group_list):
     """ Sets up worker components, runs before jupyterhub setup, after common setup. """
-    instance = launch_server(config, ec2, security_group_list, size=3)
+    instance = launch_server(config, ec2, security_group_list, size=config.worker_ebs_size)
     instance.wait_until_exists()
     instance.wait_until_running()
 
@@ -202,44 +201,8 @@ def make_worker_ami(config, ec2, security_group_list):
     return worker_ami.id
 
 ######################################################################################################################
-################################################## AWS INTERFACE #####################################################
+################################################## AWS HELPERS #######################################################
 ######################################################################################################################
-
-# def create_subnet(config):
-#     ec2 = ec2_connection(config.region)
-#     vpc = get_resource(config.region).Vpc(VPC_ID)
-#     subnets = ec2.describe_subnets(Filters=[{"Name": "vpc-id", "Values": [VPC_ID]}])
-#     cidr_blocks = [subnet["CidrBlock"] for subnet in subnets["Subnets"]]
-#
-#     # Validation that VPC and Subnet CIDR Blocks are structured as expected
-#     _, mask_length = vpc.cidr_block.split("/")
-#     if mask_length != "16":
-#         raise Exception("VPC CIDR Block must have mask length 16: %" % vpc.cidr_block)
-#     for cidr_block in cidr_blocks:
-#         _, mask_length = cidr_block.split("/")
-#         if mask_length != "24":
-#             raise Exception("Subnet CIDR Blocks must have mask length 24: %" % cidr_block)
-#
-#     # Find available CIDR Block for new subnet
-#     subnet_numbers = [int(cidr_block.split("/")[0].split(".")[2]) for cidr_block in cidr_blocks]
-#     new_subnet = 0
-#     if subnet_numbers:
-#         new_subnet = max(subnet_numbers) + 1
-#
-#     # "10.0.0.1/16" -> ["10", "0"]
-#     vpc_prefix = vpc.cidr_block.split("/")[0].split(".")[:2]
-#     # -> ["10", "0", "2", "0]
-#     vpc_prefix.extend([str(new_subnet), "0"])
-#     # -> "10.0.2.0/24"
-#     subnet_cidr = ".".join(vpc_prefix) + "/24"
-#
-#     # Create and tag subnet
-#     subnet = vpc.create_subnet(CidrBlock=subnet_cidr)
-#
-#     # Ensure the subnet is created before tagging it
-#     retry(subnet.create_tags, Tags=[{"Key": "Name", "Value": "Jupyter Hub %s" % config.cluster_name}])
-#     return subnet
-
 
 def create_security_group(name):
     security_group = ec2_connection(config.region).create_security_group(
@@ -316,7 +279,8 @@ def create_server_security_groups():
 
 
 def launch_server(config, ec2, security_groups_list, size=8):
-    # if we need more storage, these are parameters for BlockDeviceMappings. Default is 8GB.
+    # if we need more storage, these are parameters for BlockDeviceMappings. AWS default for EBS-backed instances is 8GB.
+    # Specifying a smaller volume size requires a custom AMI of that particular size, or AWS will throw an error.
     boot_drive = {'DeviceName': '/dev/sda1',  # this is to be the boot drive
                   'Ebs': {'VolumeSize': size,  # size in gigabytes
                           'DeleteOnTermination': True,
@@ -346,6 +310,7 @@ def launch_server(config, ec2, security_groups_list, size=8):
 
 
 #####################################################################################################################
+################################################# OTHER HELPERS #####################################################
 #####################################################################################################################
 
 def validate_config():
@@ -381,12 +346,13 @@ def retry(function, *args, **kwargs):
     raise e
 
 #####################################################################################################################
+#################################################### MAIN ###########################################################
 #####################################################################################################################
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Launches a JupyterHub cluster")
     parser.add_argument("cluster_name", help="the name of the cluster, used for tagging aws resources")
-    parser.add_argument("base_ami", help="the AWS AMI id for the anager server(s)")
+    parser.add_argument("base_ami", help="the AWS base AMI id used for user servers")
     parser.add_argument("private_subnet_id", help="the AWS id of the private subnet for user servers")
     parser.add_argument("public_subnet_id", help="the AWS id of the public subnet for manager server(s)")
     for item, default in CONFIG_DEFAULTS.items():

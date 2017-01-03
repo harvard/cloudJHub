@@ -4,6 +4,7 @@
 # https://github.com/jupyterhub/jupyterhub/blob/master/examples/cull-idle/cull_idle_servers.py
 # Due to environment variable bugs we have changed the mechanism by which we attain the jupyterhub
 # API key.
+# Author: Eli <eli@zagaran.com>
 
 import datetime
 import json

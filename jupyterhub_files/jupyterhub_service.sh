@@ -10,8 +10,9 @@
 #                    placed in /etc/init.d.
 ### END INIT INFO
 
-# Author: Alisue <lambdalisue@hashnote.net>
-#
+# Source: https://github.com/jupyterhub/jupyterhub/wiki/Run-jupyterhub-as-a-system-servicea
+# Original Author: Alisue <lambdalisue@hashnote.net>
+# Modified By: Eli <eli@zagaran.com>
 # Please remove the "Author" lines above and replace them
 # with your own name if you copy and modify this script.
 
@@ -49,6 +50,7 @@ do_start()
     #   0 if daemon has been started
     #   1 if daemon was already running
     #   2 if daemon could not be started
+    cd /etc/jupyterhub
     start-stop-daemon --start --quiet --pidfile $PIDFILE --exec $DAEMON --test > /dev/null \
         || return 1
     start-stop-daemon --start --background --make-pidfile --quiet --pidfile $PIDFILE --exec $DAEMON -- \
