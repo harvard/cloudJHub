@@ -1,0 +1,124 @@
+Requirements
+
+	1. a VPC with two subnets, at least one of them have Internet access.
+	2. a role with permission to manage EC2 instances and roles.
+	3. a public/private key.
+Below is a full example to setup AWS environment. For illustration, all resources are tagged using the following convention : 
+tag Key : Name 
+tag Value : jupyter_{RESOURCENAME} 
+
+You don't need to follow our resource tag convention since it used for illustration.
+
+Create and configure the VPC, Subnets, Internet Gateway and routing tables
+
+From AWS Console -> VPC -> VPC Dashboard -> Start VPC Wizard
+
+	IP CIDR block:* 192.168.0.0/16
+	VPC name:jupyter_vpc
+	Public subnet:* 192.168.0.0/24
+	Availability Zone:* us-east-1c
+	Public subnet name: jupyter_manager_sub
+	Private subnet:* 192.168.128.0/17
+	Availability Zone:* us-east-1d
+	Private subnet name: jupyter_worker_sub
+	Elastic IP Allocation ID:* eipalloc-b...
+	Enable DNS hostnames:* : yes
+	Hardware tenancy:* : Default
+	Create the required roles
+
+
+Roles are required by the : 
+1. The machine that will launch the script to create the jupytehub mangers (If AWS Access/Secret keys is not used). This machine need to have permission to manage EC2 instances and roles.
+2. The cluster managers to manage users ipython notebook instances. 
+One role with EC2 management permission and role assignment permission will be sufficient, lets call it "jupyter_role" 
+From IAM -> Policies -> Create Policy -> Create Your Own Policy -> Policy Name : jupyter_role -> Policy Document: 
+
+
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": "ec2:*",
+            "Effect": "Allow",
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": "cloudwatch:*",
+            "Resource": "*"
+        },
+        {
+            "Effect": "Allow",
+            "Action": [
+                "iam:AddRoleToInstanceProfile",
+                "iam:CreateInstanceProfile",
+                "iam:ListInstanceProfiles",
+                "iam:ListInstanceProfilesForRole",
+                "iam:ListRoles",
+                "iam:RemoveRoleFromInstanceProfile",
+                "iam:GetInstanceProfile",
+                "iam:PassRole"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+
+
+From IAM -> Roles -> Create New Role -> Role Name: jupyter_role -> Amazon EC2 -> Attach Policy : jupyter_role 
+Write Down the ARN profile " arn:aws:iam::181720344025:instance-profile/jupyter_role" as it will be needed later to launch the cluster.
+
+
+Create SSH Keys
+
+The ssh key will be used by the the machine that will launch the script to access and configure jupytehub manger(s). And also by the cluster managers to access the users ipython notebook instances. To create the key:
+AWS Console -> EC2 Dashbord -> Key Pairs -> Create Key Pair -> Key pair name: jupyter_key 
+Save the private key "jupyter_key.pem" and send it to the machine that will run the launch script to create jupyterhub manager(s).
+
+Create the EC2 GW machine with role
+
+Create EC2 instance in the a public subnet with "jupyter_role" role. This instance will be used to create jupyterhub cluster.
+Assume the instance IP is : 54.224.174.155 
+
+Create the Cluster
+
+# Move the key to the GW machine (IP: 54.224.174.155)
+scp -i tmp-test-jupyterhub.pem jupyter_key.pem ec2-user@54.224.174.155:/tmp/
+
+# login to the GW and be root
+ssh -i tmp-test-jupyterhub.pem ec2-user@54.224.174.155
+sudo su - 
+
+# move the key to a .ssh folder in root
+mv /tmp/jupyter_key.pem .ssh/
+chmod 600 .ssh/jupyter_key.pem 
+
+# update the machine
+yum update -y
+
+
+# Install git and clone the repository
+yum install git -y 
+git clone https://github.com/harvard/cloudJHub.git
+
+# cd to the repo folder and install the requirements packages
+cd cloudJHub/
+pip install -r launch_cluster/requirements.txt
+
+# Prepare the secure.py file. Note the key path and the role profile of "jupyter_runinstance" role we created above
+cat > launch_cluster/secure.py << EOF
+> AWS_ACCESS_KEY_ID = ""
+> AWS_SECRET_KEY = ""
+> KEY_NAME = "jupyter_key"
+> KEY_PATH = "/root/.ssh/%s.pem" % KEY_NAME
+> MANAGER_IAM_ROLE = "arn:aws:iam::072955634019:instance-profile/jupyter_role"
+> VPC_ID = "vpc-92df58f4"
+> EOF
+
+# Launch the cluster
+launch_cluster/launch.py --ignore_permissions true cloudjhub-test_Jan182017_1235 ami-5dbe974a subnet-fd9bb4b4 subnet-54502979 
+It might take between 10 to 20 minutes for the code to finish and the cluster to be ready.
+
+Login to the new cluster manager Go to your AWS environement where you deployed jupyterhub cluster and search for the IP of the manager, an EC2 instance with the tag "JUPYTER_HUB_1c_cloudjhub-test_Jan182017_1235_MANAGER"SEAS Open the URL http://54.89.221.231 in your browser login with adminuser and empty password
+
+
