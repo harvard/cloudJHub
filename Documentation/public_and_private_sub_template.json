@@ -6,8 +6,8 @@
   "Mappings" : {
     "SubnetConfig" : {
       "VPC"     : { "CIDR" : "192.168.0.0/16" },
-      "Public"  : { "CIDR" : "172.168.0.0/24" },
-      "Private" : { "CIDR" : "172.168.128.0/17" }
+      "Public"  : { "CIDR" : "192.168.0.0/24" },
+      "Private" : { "CIDR" : "192.168.128.0/17" }
     }
   },
 
