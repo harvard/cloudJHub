@@ -1,6 +1,7 @@
 BSD 3-Clause License
 
 Copyright (c) 2016, The President and Fellows of Harvard College
+
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
