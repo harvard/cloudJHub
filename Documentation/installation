@@ -14,12 +14,12 @@ Create and configure the VPC, Subnets, Internet Gateway and routing tables
 
 From AWS Console -> VPC -> VPC Dashboard -> Start VPC Wizard
 
-	IP CIDR block:* 192.168.0.0/16
+	IP CIDR block:* 10.10.0.0/16
 	VPC name:jupyter_vpc
-	Public subnet:* 192.168.0.0/24
+	Public subnet:* 10.10.0.0/24
 	Availability Zone:* us-east-1c
 	Public subnet name: jupyter_manager_sub
-	Private subnet:* 192.168.128.0/17
+	Private subnet:* 10.10.128.0/17
 	Availability Zone:* us-east-1d
 	Private subnet name: jupyter_worker_sub
 	Elastic IP Allocation ID:* eipalloc-b...
@@ -112,8 +112,8 @@ cat > launch_cluster/secure.py << EOF
 > AWS_SECRET_KEY = ""
 > KEY_NAME = "jupyter_key"
 > KEY_PATH = "/root/.ssh/%s.pem" % KEY_NAME
-> MANAGER_IAM_ROLE = "arn:aws:iam::072955634019:instance-profile/jupyter_role"
-> VPC_ID = "vpc-92df58f4"
+> MANAGER_IAM_ROLE = "arn:aws:iam::063463463463:instance-profile/jupyter_role"
+> VPC_ID = "vpc-92929292"
 > EOF
 
 # Launch the cluster
