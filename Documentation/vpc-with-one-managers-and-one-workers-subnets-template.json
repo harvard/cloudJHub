@@ -1,0 +1,118 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "AWS CloudFormation Template to create a VPC with one manager and one worker subnets",
+
+  "Mappings" : {
+    "SubnetConfig" : {
+      "VPC"     : { "CIDR" : "10.10.0.0/16" },
+      "Manager"  : { "CIDR" : "10.10.0.0/24" },
+      "Worker" : { "CIDR" : "10.10.128.0/17" }
+    }
+  },
+
+  "Resources" : {
+
+    "VPC" : {
+      "Type" : "AWS::EC2::VPC",
+      "Properties" : {
+        "EnableDnsSupport" : "true",
+        "EnableDnsHostnames" : "true",
+        "CidrBlock" : { "Fn::FindInMap" : [ "SubnetConfig", "VPC", "CIDR" ]},
+	"Tags" : [ {"Key" : "Name", "Value" : "jupytertest"}]
+      }
+    },
+
+    "ManagerSubnet" : {
+      "Type" : "AWS::EC2::Subnet",
+      "Properties" : {
+        "VpcId" : { "Ref" : "VPC" },
+        "CidrBlock" : { "Fn::FindInMap" : [ "SubnetConfig", "Manager", "CIDR" ]},
+	"Tags" : [ {"Key" : "Name", "Value" : "jupytertest-manager"}]
+      }
+    },
+
+    "WorkerSubnet" : {
+      "Type" : "AWS::EC2::Subnet",
+      "Properties" : {
+        "VpcId" : { "Ref" : "VPC" },
+        "CidrBlock" : { "Fn::FindInMap" : [ "SubnetConfig", "Worker", "CIDR" ]},
+	"Tags" : [ {"Key" : "Name", "Value" : "jupytertest-worker"}]
+      }
+    },
+
+    "InternetGateway" : {
+	"Type" : "AWS::EC2::InternetGateway",
+	"Properties" : {
+		"Tags" : [ {"Key" : "Name", "Value" : "jupytertest"}]
+	}
+    },
+
+    "GatewayToInternet" : {
+       "Type" : "AWS::EC2::VPCGatewayAttachment",
+       "Properties" : {
+         "VpcId" : { "Ref" : "VPC" },
+         "InternetGatewayId" : { "Ref" : "InternetGateway" }
+       }
+    },
+
+    "ManagerRouteTable" : {
+      "Type" : "AWS::EC2::RouteTable",
+      "Properties" : {
+        "VpcId" : { "Ref" : "VPC" },
+	"Tags" : [ {"Key" : "Name", "Value" : "jupytertest-manager"}]
+      }
+    },
+
+    "WorkerRouteTable" : {
+      "Type" : "AWS::EC2::RouteTable",
+      "Properties" : {
+        "VpcId" : { "Ref" : "VPC" },
+	"Tags" : [ {"Key" : "Name", "Value" : "jupytertest-worker"}]
+      }
+    },
+
+    "ManagerRoute" : {
+      "Type" : "AWS::EC2::Route",
+      "DependsOn" : "GatewayToInternet",
+      "Properties" : {
+        "RouteTableId" : { "Ref" : "ManagerRouteTable" },
+        "DestinationCidrBlock" : "0.0.0.0/0",
+        "GatewayId" : { "Ref" : "InternetGateway" }
+      }
+    },
+
+    "ManagerSubnetRouteTableAssociation" : {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+        "SubnetId" : { "Ref" : "ManagerSubnet" },
+        "RouteTableId" : { "Ref" : "ManagerRouteTable" }
+      }
+    }, 
+
+    "WorkerSubnetRouteTableAssociation" : {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+        "SubnetId" : { "Ref" : "WorkerSubnet" },
+        "RouteTableId" : { "Ref" : "WorkerRouteTable" }
+      }
+    }
+  },
+
+  "Outputs" : {
+    "VPCId" : {
+      "Description" : "VPCId of the newly created VPC",
+      "Value" :  { "Ref" : "VPC" }
+    },
+
+    "ManagerSubnet" : {
+      "Description" : "SubnetId of the manager subnet",
+      "Value" :  { "Ref" : "ManagerSubnet" }
+    },
+
+    "WorkerSubnet" : {
+      "Description" : "SubnetId of the worker subnet",
+      "Value" :  { "Ref" : "WorkerSubnet" }
+    }
+  }
+}
