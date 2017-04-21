@@ -3,7 +3,8 @@ Requirements
 	1. a VPC with two subnets, at least one of them have Internet access.
 	2. a role with permission to manage EC2 instances and roles.
 	3. a public/private key.
-Below is a full example to setup AWS environment. For illustration, all resources are tagged using the following convention : 
+
+Below is a full example to setup AWS environment. Resources are tagged using the following convention : 
 tag Key : Name 
 tag Value : jupyter_{RESOURCENAME} 
 
