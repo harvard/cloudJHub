@@ -27,6 +27,7 @@ From AWS Console -> VPC -> VPC Dashboard -> Start VPC Wizard
 	Hardware tenancy:* : Default
 	Create the required roles
 
+You can also use the cloudFormation template,vpc-with-one-managers-and-one-workers-subnets-template.json, we provided to create the VPC and the required subnets. 
 
 Roles are required by the : 
 1. The machine that will launch the script to create the jupytehub mangers (If AWS Access/Secret keys is not used). This machine need to have permission to manage EC2 instances and roles.
