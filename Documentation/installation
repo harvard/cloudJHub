@@ -151,6 +151,10 @@ c.JupyterHub.confirm_no_ssl = False
 c.JupyterHub.ssl_cert = '/etc/jupyterhub/ssl/jupyterhub.cer'
 c.JupyterHub.ssl_key = '/etc/jupyterhub/ssl/jupyterhub.key'
 
+# Authentication 
+Jupyterhub by default configured to use the development authentication with allow authentication with no password. Change the authentication
+from jupyterhub_files/jupyterhub_config.py. You can change it later. For now we will leave it on the default. 
+
 
 # Launch the cluster
 # launch_cluster/launch.py --help
@@ -165,6 +169,6 @@ It might take between 10 to 20 minutes for the code to finish and the cluster to
 Login to the new cluster manager 
 In AWS EC2 dashboard, get the public IP of the manager you just created. The manager EC2 instance will have tag key "Name": and tag Value :"JUPYTER_HUB_[AZ]_seas_jupyterhub_May1717_MANAGER".
 Browse to https://{MANAGER IP} (or http://{MANAGER IP} if you did not configure the SSL certificate),
-login as user admin (youremail@domain) with empty password.
+login as user admin (youremail@domain) with empty password (unless you change the authentication before you launch the script).
 
 
