@@ -33,8 +33,6 @@ VPC ID : vpc-92929292
 Managers SUBNET ID : subnet-54502979
 Workers SUBNET ID : subnet-fd9bb4b4
  
-launch_cluster/launch.py --ignore_permissions true cloudjhub-test_Jan182017_1235 ami-5dbe974a 
-
 
 
 Roles are required by the : 
