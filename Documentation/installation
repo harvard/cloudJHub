@@ -96,21 +96,17 @@ Assume the instance IP is : 54.224.174.155
 Create the Cluster
 
 # Move the key to the GW machine (IP: 54.224.174.155)
-scp jupyter_key.pem 54.224.174.155:/tmp/
+scp jupyter_key.pem 54.224.174.155:/home/ec2-user/.ssh
 
-# login to the GW and be root
+# login to the GW 
 ssh 54.224.174.155
-sudo su - 
-
-# move the key to a .ssh folder in root
-mv /tmp/jupyter_key.pem .ssh/
 chmod 600 .ssh/jupyter_key.pem 
 
 # update the machine
-yum update -y
+sudo yum update -y
 
 # Install required packages
-yum install git python2-pip gcc python-devel openssl-devel -y 
+sudo yum install git python2-pip gcc python-devel openssl-devel -y 
 
 
 # Install git and clone the repository
