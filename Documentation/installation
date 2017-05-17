@@ -126,7 +126,7 @@ cat > launch_cluster/secure.py << EOF
  AWS_ACCESS_KEY_ID = ""
  AWS_SECRET_KEY = ""
  KEY_NAME = "jupyter_key"
- KEY_PATH = "/root/.ssh/%s.pem" % KEY_NAME
+ KEY_PATH = "/home/ec2-user/.ssh/%s.pem" % KEY_NAME
  MANAGER_IAM_ROLE = "arn:aws:iam::063463463463:instance-profile/jupyter_role"
  VPC_ID = "vpc-92929292"
  EOF
