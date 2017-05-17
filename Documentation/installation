@@ -141,6 +141,17 @@ __tokengeneratoradmin admin
 youremail@domain admin
 EOF
 
+# Prepare the SSL
+# SSL Certificate can be added to the manager during before of after the launch time. To add them beefore the launch then 
+# first copy your ssl certificate and key (say jupyterhub.cer , and jupyterhub.key) to the ssl folder, then
+# open jupyterhub_files/jupyterhub_config.py, and configure the port, certificates path.
+
+c.JupyterHub.port = 443
+c.JupyterHub.confirm_no_ssl = False
+c.JupyterHub.ssl_cert = '/etc/jupyterhub/ssl/jupyterhub.cer'
+c.JupyterHub.ssl_key = '/etc/jupyterhub/ssl/jupyterhub.key'
+
+
 # Launch the cluster
 # launch_cluster/launch.py --help
 # launch_cluster/launch.py seas_jupyterhub_May1717 ami-5dbe974a subnet-fd9bb4b4 subnet-54502979
@@ -153,4 +164,8 @@ It might take between 10 to 20 minutes for the code to finish and the cluster to
 
 Login to the new cluster manager 
 In AWS EC2 dashboard, get the public IP of the manager you just created. The manager EC2 instance will have tag key "Name": and tag Value :"JUPYTER_HUB_[AZ]_seas_jupyterhub_May1717_MANAGER".
-Open the URL http://{MANAGER IP} in your browser, login as admin with youremail@domain and empty password
+Browse https://{MANAGER IP} (or http://{MANAGER IP} if you did not configure the SSL certificate),
+login as admin (user youremail@domain) with empty password
+
+
+
