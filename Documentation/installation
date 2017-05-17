@@ -158,16 +158,6 @@ c.JupyterHub.ssl_key = '/etc/jupyterhub/ssl/jupyterhub.key'
 
 launch_cluster/launch.py --worker_instance_type t2.small --custom_worker_ami ami-f3fa8de5 --manager_instance_type t2.medium --ignore_permissions true seas_jupyterhub_May1717 ami-5dbe974a subnet-fd9bb4b4 subnet-54502979
 
-Ignoring ssh key permissions
-INFO:__main__:collecting AWS resources
-.
-.
-[54.90.238.173] sudo: echo '{"AVAILABILITY_ZONE": "us-east-1c", "SUBNET_ID": "subnet-d24fc889", "JUPYTER_MANAGER_IP": "54.90.238.173", "WORKER_SERVER_OWNER": "", "MANAGER_IP_ADDRESS": "192.168.0.79", "JUPYTER_NOTEBOOK_TIMEOUT": 3600, "WORKER_AMI": "ami-f3fa8de5", "JUPYTER_CLUSTER": "seas_jupyterhub_May1717", "WORKER_SECURITY_GROUPS": ["sg-cf8cf4b1"], "WORKER_SERVER_NAME": "JUPYTER_HUB_1c_seas_jupyterhub_May1717_WORKER", "KEY_NAME": "jupyter_key", "REGION": "us-east-1", "INSTANCE_TYPE": "t2.small", "WORKER_EBS_SIZE": 8, "SERVER_USERNAME": "ubuntu"}' > /etc/jupyterhub/server_config.json
-.
-.
-INFO:__main__:Manager server successfully launched. Please wait 15 minutes for the worker server AMI image to become available. No worker servers (and thus, no user sessions) can be launched until the AMI is available.
-Launch script done.
-
 
 
 It might take between 10 to 20 minutes for the code to finish and the cluster to be ready.
