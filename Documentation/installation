@@ -164,8 +164,7 @@ It might take between 10 to 20 minutes for the code to finish and the cluster to
 
 Login to the new cluster manager 
 In AWS EC2 dashboard, get the public IP of the manager you just created. The manager EC2 instance will have tag key "Name": and tag Value :"JUPYTER_HUB_[AZ]_seas_jupyterhub_May1717_MANAGER".
-Browse https://{MANAGER IP} (or http://{MANAGER IP} if you did not configure the SSL certificate),
-login as admin (user youremail@domain) with empty password
-
+Browse to https://{MANAGER IP} (or http://{MANAGER IP} if you did not configure the SSL certificate),
+login as user admin (youremail@domain) with empty password.
 
 
