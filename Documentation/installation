@@ -137,12 +137,17 @@ cat > launch_cluster/secure.py << EOF
  VPC_ID = "vpc-92929292"
  EOF
 
+# Prepare the users and admins 
+cat > jupyterhub_files/userlist  << EOf
+__tokengeneratoradmin admin
+fadel@seas.harvard.edu admin
+EOF
+
 # Launch the cluster
 # launch_cluster/launch.py --ignore_permissions true {CLUSTER_NAME} [Optional AMI ID] {WORKERS_SUBNET_ID} {MANAGERS_SUBNET_ID}
 # Managers SUBNET ID : subnet-54502979
 # Workers SUBNET ID : subnet-fd9bb4b4
 # AMI ID is optional, it used if the AMI image that will be used by the workers is ready.
-
 
 ~> launch_cluster/launch.py --ignore_permissions true seas_jupyterhub_May1717 ami-5dbe974a subnet-fd9bb4b4 subnet-54502979 
 It might take between 10 to 20 minutes for the code to finish and the cluster to be ready.
