@@ -67,17 +67,21 @@ From IAM -> Policies -> Create Policy -> Create Your Own Policy -> Policy Name :
 }
 
 
-From IAM -> Roles -> Create New Role -> Role Name: jupyter_role -> Amazon EC2 -> Attach Policy : jupyter_role 
-Write Down the ARN profile " arn:aws:iam::181720344025:instance-profile/jupyter_role" as it will be needed later to launch the cluster.
+From IAM -> Roles -> Create New Role -> Select role type -> AWS Service Role: Amazon EC2 (Select) -> Attach Policy : jupyter_role ->
+Role Name: jupyter_role -> Create Role
+
+Write Down the ARN profile "arn:aws:iam::181720344025:instance-profile/jupyter_role" as it will be needed later to launch the cluster.
 
 
 Create SSH Keys
 
-The ssh key will be used by the the machine that will launch the script to access and configure jupytehub manger(s). And also by the cluster managers to access the users ipython notebook instances. To create the key:
+The ssh key will be used by the the machine that will launch the script to access and configure jupytehub manger(s).
+And it will be used by the cluster managers to access the users ipython notebook instances. 
+To create the key:
 AWS Console -> EC2 Dashbord -> Key Pairs -> Create Key Pair -> Key pair name: jupyter_key 
 Save the private key "jupyter_key.pem" and send it to the machine that will run the launch script to create jupyterhub manager(s).
 
-Create the EC2 GW machine with role
+Create the EC2 GW machine with role (CentOS7)
 
 Create EC2 instance in the a public subnet with "jupyter_role" role. This instance will be used to create jupyterhub cluster.
 Assume the instance IP is : 54.224.174.155 
@@ -85,10 +89,10 @@ Assume the instance IP is : 54.224.174.155
 Create the Cluster
 
 # Move the key to the GW machine (IP: 54.224.174.155)
-scp -i tmp-test-jupyterhub.pem jupyter_key.pem ec2-user@54.224.174.155:/tmp/
+scp jupyter_key.pem 54.224.174.155:/tmp/
 
 # login to the GW and be root
-ssh -i tmp-test-jupyterhub.pem ec2-user@54.224.174.155
+ssh 54.224.174.155
 sudo su - 
 
 # move the key to a .ssh folder in root
@@ -98,24 +102,26 @@ chmod 600 .ssh/jupyter_key.pem
 # update the machine
 yum update -y
 
+# Install required packages
+yum install git python2-pip gcc python-devel openssl-devel -y 
+
 
 # Install git and clone the repository
-yum install git -y 
 git clone https://github.com/harvard/cloudJHub.git
 
 # cd to the repo folder and install the requirements packages
 cd cloudJHub/
 pip install -r launch_cluster/requirements.txt
 
-# Prepare the secure.py file. Note the key path and the role profile of "jupyter_runinstance" role we created above
+# Prepare the secure.py file. Note the key path and the role profile of "jupyter_role" role we created above
 cat > launch_cluster/secure.py << EOF
-> AWS_ACCESS_KEY_ID = ""
-> AWS_SECRET_KEY = ""
-> KEY_NAME = "jupyter_key"
-> KEY_PATH = "/root/.ssh/%s.pem" % KEY_NAME
-> MANAGER_IAM_ROLE = "arn:aws:iam::063463463463:instance-profile/jupyter_role"
-> VPC_ID = "vpc-92929292"
-> EOF
+ AWS_ACCESS_KEY_ID = ""
+ AWS_SECRET_KEY = ""
+ KEY_NAME = "jupyter_key"
+ KEY_PATH = "/root/.ssh/%s.pem" % KEY_NAME
+ MANAGER_IAM_ROLE = "arn:aws:iam::063463463463:instance-profile/jupyter_role"
+ VPC_ID = "vpc-92929292"
+ EOF
 
 # Launch the cluster
 launch_cluster/launch.py --ignore_permissions true cloudjhub-test_Jan182017_1235 ami-5dbe974a subnet-fd9bb4b4 subnet-54502979 
