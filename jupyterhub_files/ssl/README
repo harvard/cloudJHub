@@ -1,0 +1,1 @@
+put your ssl certificate and key here, and modify the ssl cert and key path in jupyterhub_config.py
