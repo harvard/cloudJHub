@@ -1,0 +1,5 @@
+# secrets
+secure.py
+*.pyc
+#secure.pyc
+api_token.txt
