@@ -100,7 +100,7 @@ def launch_manager(config):
         "KEY_NAME": KEY_NAME,
         "JUPYTER_CLUSTER": config.cluster_name,
         "INSTANCE_TYPE": config.worker_instance_type,
-        "WORKER_EBS_SIZE": config.worker_ebs_size,
+        "WORKER_EBS_SIZE": int(config.worker_ebs_size),
         "SUBNET_ID": config.private_subnet_id,
         "JUPYTER_NOTEBOOK_TIMEOUT": int(config.jupyter_notebook_timeout),
         "JUPYTER_MANAGER_IP": instance.public_ip_address,
