@@ -334,10 +334,6 @@ def validate_config():
         if int(config.worker_ebs_size) <= 0 : 
             print ("EBS size is a positive integer")
             exit()
-    
-    if not config.jupyter_notebook_timeout.isdigit():
-        print ("time out must be an integer")
-        exit()
 
 
 
