@@ -327,16 +327,16 @@ def validate_config():
     else:
         print("Ignoring ssh key permissions")
     
-    if config.worker_ebs_size.isdigit():
-        config.worker_ebs_size = abs(config.worker_ebs_size)
-    else:
-        print ("Non positive integer for EBS Volume size")
+    if not config.worker_ebs_size.isdigit():
+        print ("EBS Volume size is a positive integer")
         exit()
-    
-    if config.jupyter_notebook_timeout.isdigit():
-        config.jupyter_notebook_timeout = abs(config.jupyter_notebook_timeout)
     else:
-        print ("time out is a positive integer")
+        if int(config.worker_ebs_size) <= 0 : 
+            print ("EBS size is a positive integer")
+            exit()
+    
+    if not config.jupyter_notebook_timeout.isdigit():
+        print ("time out must be an integer")
         exit()
 
 
