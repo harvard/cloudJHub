@@ -326,6 +326,20 @@ def validate_config():
             exit()
     else:
         print("Ignoring ssh key permissions")
+    
+    if config.worker_ebs_size.isdigit():
+        config.worker_ebs_size = abs(config.worker_ebs_size)
+    else:
+        print ("Non positive integer for EBS Volume size")
+        exit()
+    
+    if config.jupyter_notebook_timeout.isdigit():
+        config.jupyter_notebook_timeout = abs(config.jupyter_notebook_timeout)
+    else:
+        print ("time out is a positive integer")
+        exit()
+
+
 
 def retry(function, *args, **kwargs):
     """ Retries a function up to max_retries, waiting `timeout` seconds between tries.
