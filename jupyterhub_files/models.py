@@ -12,16 +12,16 @@ class BaseModel(Model):
 class Server(BaseModel):
     server_id = TextField(unique=True)
     created_at = DateTimeField(default=datetime.datetime.now)
-    username = TextField(unique=True)
+    user_id = TextField(unique=True)
     # ebs_volume_id = TextField(unique=True)
 
     @classmethod
-    def new_server(cls, server_id, username):
-        cls.create(server_id=server_id, username=username)
+    def new_server(cls, server_id, user_id):
+        cls.create(server_id=server_id, user_id=user_id)
 
     @classmethod
-    def get_server(cls, username):
-        return cls.get(username=username)
+    def get_server(cls, user_id):
+        return cls.get(user_id=user_id)
 
     @classmethod
     def get_server_count(cls):
