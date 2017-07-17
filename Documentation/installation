@@ -133,7 +133,7 @@ cat > launch_cluster/secure.py << EOF
  EOF
 
 # Prepare the users and admins 
-cat > jupyterhub_files/userlist  << EOf
+cat > jupyterhub_files/userlist  << EOF
 __tokengeneratoradmin admin
 youremail@domain admin
 EOF
