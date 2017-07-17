@@ -12,7 +12,7 @@ You don't need to follow our resource tag convention since it used for illustrat
 
 Create and configure the VPC, Subnets, Internet Gateway and routing tables
 
-From AWS Console -> VPC -> VPC Dashboard -> Start VPC Wizard
+From AWS Console -> VPC -> VPC Dashboard -> Start VPC Wizard -> VPC with Public and Private Subnets -> Select 
 
 	IP CIDR block:* 10.10.0.0/16
 	VPC name:jupyter_vpc
@@ -22,7 +22,7 @@ From AWS Console -> VPC -> VPC Dashboard -> Start VPC Wizard
 	Private subnet:* 10.10.128.0/17
 	Availability Zone:* us-east-1d
 	Private subnet name: jupyter_worker_sub
-	Elastic IP Allocation ID:* eipalloc-b...
+	Elastic IP Allocation ID:* eipalloc-71722333 (need to generate an EIP beforehand)
 	Enable DNS hostnames:* : yes
 	Hardware tenancy:* : Default
 	Create the required roles
@@ -39,7 +39,8 @@ Roles are required by the :
 1. The machine that will launch the script to create the jupytehub mangers (If AWS Access/Secret keys is not used). 
 This machine need to have permission to manage EC2 instances and roles.
 2. The cluster managers to manage users ipython notebook instances. 
-One role with EC2 management permission and role assignment permission will be sufficient, lets call it "jupyter_role" 
+One role with EC2 management permission and role assignment permission will be sufficient, will call it "jupyter_role".
+
 From IAM -> Policies -> Create Policy -> Create Your Own Policy -> Policy Name : jupyter_role -> Policy Document: 
 
 
