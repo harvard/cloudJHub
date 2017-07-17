@@ -162,7 +162,7 @@ def setup_manager(server_params, manager_ip_address):
 
 def make_worker_ami(config, ec2, security_group_list):
     """ Sets up worker components, runs before jupyterhub setup, after common setup. """
-    instance = launch_server(config, ec2, security_group_list, size=config.worker_ebs_size)
+    instance = launch_server(config, ec2, security_group_list, size=int(config.worker_ebs_size))
     instance.wait_until_exists()
     instance.wait_until_running()
 
