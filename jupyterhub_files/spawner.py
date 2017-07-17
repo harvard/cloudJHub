@@ -290,6 +290,7 @@ class InstanceSpawner(Spawner):
         start_notebook_cmd.append("--ip=%s" % worker_ip_address_string)
         start_notebook_cmd.append("--port=%s" % NOTEBOOK_SERVER_PORT)
         start_notebook_cmd = " ".join(start_notebook_cmd)
+        start_notebook_cmd.append(" --allow-root ")
         # start notebook. provide runtime args
         self.log.info("Starting user %s jupyterhub" % self.user.name)
         with settings(**FABRIC_DEFAULTS, host_string=worker_ip_address_string):
