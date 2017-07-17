@@ -289,8 +289,8 @@ class InstanceSpawner(Spawner):
         start_notebook_cmd.append("--hub-api-url=http://%s:8081/hub/api" % HUB_MANAGER_IP_ADDRESS)
         start_notebook_cmd.append("--ip=%s" % worker_ip_address_string)
         start_notebook_cmd.append("--port=%s" % NOTEBOOK_SERVER_PORT)
-        start_notebook_cmd = " ".join(start_notebook_cmd)
         start_notebook_cmd.append(" --allow-root ")
+        start_notebook_cmd = " ".join(start_notebook_cmd)
         # start notebook. provide runtime args
         self.log.info("Starting user %s jupyterhub" % self.user.name)
         with settings(**FABRIC_DEFAULTS, host_string=worker_ip_address_string):
