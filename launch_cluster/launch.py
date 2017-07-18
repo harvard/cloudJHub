@@ -45,7 +45,6 @@ def launch_manager(config):
     """ Creates security groups, Jupyterhub manager, and worker AMI. Refer to README.md for details on what the
         launch script does. """
     
-    validate_config()
     logger.info("collecting AWS resources")
     public_subnet = subnet_connection(config.region, config.public_subnet_id)
     ec2 = ec2_connection(config.region)
@@ -100,7 +99,7 @@ def launch_manager(config):
         "KEY_NAME": KEY_NAME,
         "JUPYTER_CLUSTER": config.cluster_name,
         "INSTANCE_TYPE": config.worker_instance_type,
-        "WORKER_EBS_SIZE": int(config.worker_ebs_size),
+        "WORKER_EBS_SIZE": config.worker_ebs_size,
         "SUBNET_ID": config.private_subnet_id,
         "JUPYTER_NOTEBOOK_TIMEOUT": int(config.jupyter_notebook_timeout),
         "JUPYTER_MANAGER_IP": instance.public_ip_address,
@@ -327,13 +326,15 @@ def validate_config():
     else:
         print("Ignoring ssh key permissions")
     
-    if not config.worker_ebs_size.isdigit():
-        print ("EBS Volume size is a positive integer")
-        exit()
-    else:
-        if int(config.worker_ebs_size) <= 0 : 
-            print ("EBS size is a positive integer")
+    if not isinstance( config.worker_ebs_size, int ):
+        if not config.worker_ebs_size.isdigit():
+            print ("EBS Volume size should be a positive integer number")
             exit()
+        else:
+            config.worker_ebs_size = int(config.worker_ebs_size)
+            if config.worker_ebs_size <= 0 : 
+                print ("EBS Volume size should be a positive integer number")
+                exit()
 
 
 
@@ -369,4 +370,5 @@ if __name__ == "__main__":
         flag = "--%s" % item.lower()
         parser.add_argument(flag, help="defaults to %s" % default, default=default)
     config = parser.parse_args()
+    validate_config()
     launch_manager(config)
