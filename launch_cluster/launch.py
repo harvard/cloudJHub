@@ -129,14 +129,16 @@ def setup_manager(server_params, manager_ip_address):
     run("cp /var/tmp/common_files/.bash_profile ~/")
     # Common installs: python 3
     sudo("apt-get -qq -y update")
-    sudo("apt-get -qq -y install -q python3.4 python3-pip sqlite sysv-rc-conf", quiet=True)
-    sudo("easy_install3 pip", quiet=True)
+    #sudo("apt-get -qq -y install -q python3.4 python3-pip sqlite sysv-rc-conf", quiet=True)
+    sudo("apt-get -qq -y install -q python3-pip sqlite sysv-rc-conf", quiet=True)
+    sudo ("pip3 install --force-reinstall --upgrade pip")
+    #sudo("easy_install3 pip", quiet=True)
     sudo("pip3 --quiet install ipython nbgrader", quiet=True)
     # Sets up jupyterhub components
     put("jupyterhub_files", remote_path="/var/tmp/")
     sudo("cp -r /var/tmp/jupyterhub_files /etc/jupyterhub")
     # pip installs
-    sudo("/usr/local/bin/pip3 install --quiet -r /var/tmp/jupyterhub_files/requirements_jupyterhub.txt")
+    sudo("pip3 install --quiet -r /var/tmp/jupyterhub_files/requirements_jupyterhub.txt")
     # apt-get installs for jupyterhub
     sudo("apt-get -qq -y install -q nodejs-legacy npm")
     # npm installs for the jupyterhub proxy
@@ -174,13 +176,14 @@ def make_worker_ami(config, ec2, security_group_list):
     retry(run, "# waiting for ssh to be connectable...", max_retries=100)
 
     sudo("apt-get -qq -y update")
-    sudo("apt-get -qq -y install -q python-pip python3-pip sqlite sysv-rc-conf")
-    sudo("pip2 install --force-reinstall --upgrade pip")
+    sudo("apt-get -qq -y install -q python python-setuptools python-dev")
     sudo("easy_install pip")
-    sudo("pip3 install --force-reinstall --upgrade pip")
-    sudo("easy_install3 pip")
+    sudo ("apt-get -qq -y install -q python3-pip sqlite sysv-rc-conf")
+    sudo ("pip3 install --force-reinstall --upgrade pip")
+
     sudo("pip3 --quiet install ipython jupyter jupyterhub ipykernel nbgrader")
     sudo("pip2 install ipykernel --upgrade")
+
     # register Python 3 and 2 kernel
     sudo("python3 -m ipykernel install")
     sudo("python2 -m ipykernel install")
