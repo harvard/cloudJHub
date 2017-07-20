@@ -10,6 +10,34 @@ is stopped when the user is deemed inactive (to save on hosting costs) and start
 
 Deploying The System
 -----------------------------------
+### Setup ###
+
+- Create a and fill-in /launch_cluster/secure.py from /launch_cluster/secure.py.example
+
+- VPC
+Example:
+VPC_ID = "vpc-xxxxxxxx"
+
+- AWS Key
+Example:
+KEY_NAME = "xxxx"
+KEY_PATH = "/ABSOLUTE/PATH/TO/KEY/xxxx.pem"
+
+- Private and Public Subnet
+User servers ("workers") are placed in a private subnet while the Jupyterhub server ("manager") is placed in a public 
+one. This is because AWS limits the number of public IP addressses we are allowed to have. This also makes worker servers 
+inaccessible from the internet other than through Jupyterhub.
+
+- NAT Gateway
+To give users' servers internet access, we need to setup a NAT gateway. Because of how AWS configures packet routing 
+we need to create two subnets, one “private” (has no public IPs) subnet and  one “public” (devices can have public IPs) subnet. 
+The private subnet needs to have all of its internet-facing traffic point at a NAT Gateway, and the public subnet needs to 
+have all of its internet-facing traffic directed towards the Internet Gateway. The NAT Gateway needs to be placed in the 
+public subnet so that it can have a public IP.
+
+- Base AMI
+Choose the latest 16.04 Ubuntu base image. You can find this in the AWS Console Launch EC2 instance interface (e.g. ami-xxxxxxxx).
+
 ### Launch Script ###
 ```
 # install requirements
