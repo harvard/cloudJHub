@@ -1,0 +1,33 @@
+JupyterHub cluster cost depends on 
+
+* Number of users = number of EC2 instances in the cluster (or cluster size)
+* Instances type,  
+* Storage (EBS) per instance
+* snapshot rate of the storage
+* Cluster manager size
+* Users average usage (hours per month)
+
+To calculate the cost let devide the cost dependancies into variables in a calculation formula
+
+  M : Manager EC2 cost per month
+  N : Number of user = number of instance
+  A : Average hours usage per user per month
+  T : users instance type
+  SS: EBS storage size
+  SC: EBS storage cost per GB per month
+  PC: EBS snapshot cost per GB per month
+
+Monthly cost  = Manager  + Users computation + Users storage
+Monthly cost  = M             + (N  * T * A )             + (N * SS * (SC + PC)))
+
+
+Example: 
+jupyterhub cluster with 20 users, each of which provisioned with t2.medium (4G Memory and 2vCPU) and 3G EBS, and assume the average hour per month per student is 30,  
+Then the monthly cost will be around:  
+Monthly cost  = M +  N  * (T     * A  + SS * (SC   + PC  ) )
+              = 34 + 20 * (0.047 * 30 + 3  * (0.05 + 0.05) ) =  34 + 29.5 =~ $68
+
+Special cases: 
+What is the cost of jupyterhub cluster would be if:
+The 20 users logged in once but did not use the system, A=0 ? 
+They abuse the system by running their notebooks 24 * 7, A= 720 ? 
