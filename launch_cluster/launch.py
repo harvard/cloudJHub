@@ -181,7 +181,15 @@ def make_worker_ami(config, ec2, security_group_list):
     sudo ("apt-get -qq -y install -q python3-pip sqlite sysv-rc-conf")
     sudo ("pip3 install --force-reinstall --upgrade pip")
 
-    sudo("pip3 --quiet install ipython jupyter jupyterhub ipykernel nbgrader")
+
+
+    put("jupyterhub_files/requirements_jupyterhub.txt", remote_path="/var/tmp/")
+    # pip installs
+    sudo("pip3 install --quiet -r /var/tmp/requirements_jupyterhub.txt")
+    # apt-get installs for jupyterhub
+
+
+    sudo("pip3 --quiet install ipython jupyter ipykernel nbgrader")
     sudo("pip2 install ipykernel --upgrade")
 
     # register Python 3 and 2 kernel
