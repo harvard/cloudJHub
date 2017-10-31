@@ -92,15 +92,16 @@ Save the private key "jupyter_key.pem" and send it to the machine that will run 
 Create the EC2 GW machine with role (CentOS7)
 
 Create EC2 instance in the a public subnet with "jupyter_role" role. This instance will be used to create jupyterhub cluster.
-Assume the instance IP is : 54.224.174.155 
+Assume the instance IP is : 54.224.174.155
+Assume user name to login to the instance is : ec2-user
 
 Create the Cluster
 
 # Move the key to the GW machine (IP: 54.224.174.155)
-scp jupyter_key.pem 54.224.174.155:/home/ec2-user/.ssh
+scp jupyter_key.pem ec2-user@54.224.174.155:/home/ec2-user/.ssh
 
 # login to the GW 
-ssh 54.224.174.155
+ssh ec2-user@54.224.174.155
 chmod 600 .ssh/jupyter_key.pem 
 
 # update the machine
@@ -115,7 +116,7 @@ git clone https://github.com/harvard/cloudJHub.git
 
 # cd to the repo folder and install the requirements packages
 cd cloudJHub/
-sudo pip2 install -r launch_cluster/requirements.txt
+sudo pip install -r launch_cluster/requirements.txt
 
 
 # Prepare the secure.py file. Require: 
