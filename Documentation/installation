@@ -99,7 +99,7 @@ Create the Cluster
 
 # Move the key to the GW machine (IP: 54.224.174.155)
 centos: scp jupyter_key.pem ec2-user@54.224.174.155:/home/ec2-user/.ssh
-ubuntu: scp jupyter_key.pem ec2-user@54.224.174.155:/home/ubuntu/.ssh
+ubuntu: scp jupyter_key.pem ubuntu@54.224.174.155:/home/ubuntu/.ssh
 
 # login to the GW 
 CentOS: ssh ec2-user@54.224.174.155
@@ -125,7 +125,7 @@ sudo pip install -r launch_cluster/requirements.txt
 
 # Prepare the secure.py file. Require: 
 # VPC ID of the VPC created above ,   
-# key path and name :  
+# key path and name : for CentOS the path we used "/home/ec2-user/.ssh , for ubuntu is should be /home/ubuntu/.ssh
 # role profile of "jupyter_role" role 
 
 cat > launch_cluster/secure.py << EOF
