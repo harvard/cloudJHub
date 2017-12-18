@@ -11,9 +11,15 @@ c = get_config()
 c.JupyterHub.cookie_secret_file = '/etc/jupyterhub/cookie_secret'
 c.JupyterHub.db_url = '/etc/jupyterhub/jupyterhub.sqlite'
 
-# For MySQL DB
-#c.JupyterHub.db_url = "mysql://{}:{}@{}/{}".format(DB_USERNAME, DB_PASSWORD,DB_HOSTNAME,DB_NAME)
-#c.JupyterHub.db_url = "mysql://{}:{}@{}/{}".format("jupyterhubdbuser", "jupyterhubdbuserpassword","jupyterhub-sql.com","jupyterhub_db")
+
+# To use MySQL DB
+#c.JupyterHub.db_url = "mysql://{}:{}@{}/{}".format(DB_USERNAME, DB_USERPASSWORD, DB_HOSTNAME, DB_NAME)
+# Replace
+#   DB_NAME with the existed jupyterhub database name in MySQL server
+#   DB_HOST with the DNS or the IP of the MySQL host
+#   DB_USERNAME and DB_USERPASSWORD with username and password of a privileged user.
+# Example :
+#   c.JupyterHub.db_url = "mysql://{}:{}@{}/{}".format("jupyterhubdbuser", "jupyter#ubdbuserp@ssword","54.0.0.99","jupyterhubdb")
 
 
 ############ Development Settings ###############
