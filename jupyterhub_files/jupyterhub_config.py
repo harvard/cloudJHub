@@ -11,6 +11,11 @@ c = get_config()
 c.JupyterHub.cookie_secret_file = '/etc/jupyterhub/cookie_secret'
 c.JupyterHub.db_url = '/etc/jupyterhub/jupyterhub.sqlite'
 
+# For MySQL DB
+#c.JupyterHub.db_url = "mysql://{}:{}@{}/{}".format(DB_USERNAME, DB_PASSWORD,DB_HOSTNAME,DB_NAME)
+#c.JupyterHub.db_url = "mysql://{}:{}@{}/{}".format("jupyterhubdbuser", "jupyterhubdbuserpassword","jupyterhub-sql.com","jupyterhub_db")
+
+
 ############ Development Settings ###############
 c.JupyterHub.log_level = "DEBUG"
 c.JupyterHub.debug_proxy = False  # show debug output in configurable-http-proxy
