@@ -157,7 +157,8 @@ def setup_manager(server_params, manager_ip_address):
     sudo("service jupyterhub start", pty=False)
     # move our cron script into place
     sudo("cp /etc/jupyterhub/jupyterhub_cron.txt /etc/cron.d/jupyterhub_cron")
-    logger.info("Manager server successfully launched. Please wait 15 minutes for the worker server AMI image to become available. No worker servers (and thus, no user sessions) can be launched until the AMI is available.")
+    if not config.custom_worker_ami:
+        logger.info("Manager server successfully launched. Please wait 15 minutes for the worker server AMI image to become available. No worker servers (and thus, no user sessions) can be launched until the AMI is available.")
     # TODO: generate ssl files and enable jupyterhub ssl
 
 
