@@ -47,7 +47,7 @@ logging.basicConfig(level=logging.INFO)
 class RemoteCmdExecutionError(Exception): pass
 env.abort_exception = RemoteCmdExecutionError
 env.abort_on_prompts = True
-FABRIC_DEFAULTS = {"user":SERVER_PARAMS["SERVER_USERNAME"],
+FABRIC_DEFAULTS = {"user":SERVER_PARAMS["WORKER_USERNAME"],
                    "key_filename":"/home/%s/.ssh/%s" % (SERVER_PARAMS["SERVER_USERNAME"], SERVER_PARAMS["KEY_NAME"])}
 
 FABRIC_QUIET = True

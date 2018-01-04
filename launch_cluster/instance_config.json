@@ -6,6 +6,7 @@
 "CUSTOM_WORKER_AMI": "",
 "SERVER_USERNAME": "ubuntu",
 "REGION": "us-east-1",
+"WORKER_USERNAME": "ubuntu",
 "SERVER_OWNER": "",
 "IGNORE_PERMISSIONS": "false"
 }
