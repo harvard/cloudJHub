@@ -107,7 +107,7 @@ def launch_manager(config):
     }
 
     # Setup the common files and settings between manager and worker.
-    setup_manager(server_params, instance.private_ip_address)
+    setup_manager(server_params, config, instance.private_ip_address)
 
     # For security, close port 22 on manager security group to prevent SSH access to manager host
     # logger.info("Closing port 22 on manager")
@@ -117,7 +117,7 @@ def launch_manager(config):
     print("Launch script done.")
 
 
-def setup_manager(server_params, manager_ip_address):
+def setup_manager(server_params,config, manager_ip_address):
     """ Sets up the files that are common to both workers and the manager,
         runs before worke and jupyterhub setup. """
     put("common_files", remote_path="/var/tmp/")
