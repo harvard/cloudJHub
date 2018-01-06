@@ -96,6 +96,7 @@ def launch_manager(config):
         "WORKER_SERVER_NAME": worker_server_name,
         "WORKER_SERVER_OWNER": config.server_owner,
         "SERVER_USERNAME": config.server_username,
+        "WORKER_USERNAME": config.worker_username,
         "KEY_NAME": KEY_NAME,
         "JUPYTER_CLUSTER": config.cluster_name,
         "INSTANCE_TYPE": config.worker_instance_type,
