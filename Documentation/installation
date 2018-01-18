@@ -160,9 +160,10 @@ from jupyterhub_files/jupyterhub_config.py. You can change it later. For now we 
 
 # Launch the cluster
 # launch_cluster/launch.py --help
-# launch_cluster/launch.py seas_jupyterhub_May1717 ami-5dbe974a subnet-fd9bb4b4 subnet-54502979
+# launch_cluster/launch.py seas_jupyterhub_May1717 ami-41e0b93b subnet-fd9bb4b4 subnet-54502979
 
-launch_cluster/launch.py --worker_instance_type t2.small --custom_worker_ami ami-f3fa8de5 --manager_instance_type t2.medium --ignore_permissions true seas_jupyterhub_May1717 ami-5dbe974a subnet-fd9bb4b4 subnet-54502979
+launch_cluster/launch.py --worker_instance_type t2.small --custom_worker_ami ami-f3fa8de5 --manager_instance_type t2.medium --ignore_permissions true seas_jupyterhub_May1717 ami-41e0b93b subnet-fd9bb4b4 subnet-54502979
+# Use your AMIs and subnets
 
 
 
