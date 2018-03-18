@@ -215,7 +215,8 @@ class InstanceSpawner(Spawner):
                 # ps -ef | grep [j]upyterhub-singleuser: grep can fail with a non-zero exit code if it finds no match.
                 # ps -ef | grep -c jupyterhub-singleuser: false positives can occur from other calls to this method.
                 for line in output.splitlines(): #
-                    if "jupyterhub-singleuser" and NOTEBOOK_SERVER_PORT in line:
+                    #if "jupyterhub-singleuser" and NOTEBOOK_SERVER_PORT in line:
+                    if "jupyterhub-singleuser" and "4444" in line:
                         self.log.debug("the following notebook is definitely running:")
                         self.log.debug(line)
                         return True

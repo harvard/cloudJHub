@@ -1,6 +1,7 @@
 import os
 import sys
 import socket
+import binascii
 
 # Inserts location of local code into jupyterhub at runtime.
 sys.path.insert(1, '/etc/jupyterhub')
@@ -26,14 +27,22 @@ c.JupyterHub.log_level	= "DEBUG"
 
 #c.JupyterHub.debug_proxy = "TRUE"
 
-c.JupyterHub.hub_ip	= '100.100.10.10'
+s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+s.connect(("8.8.8.8", 80))
+localip = s.getsockname()[0]
+
+c.JupyterHub.hub_ip	= localip
 c.JupyterHub.hub_port	= 8081
 c.JupyterHub.port	= 80
 
-c.ConfigurableHTTPProxy.api_url		= 'http://100.100.10.10:8001'
-c.ConfigurableHTTPProxy.auth_token	= 'PUT token here'
+c.ConfigurableHTTPProxy.api_url		= 'http://' + localip +':8001'
+#c.ConfigurableHTTPProxy.auth_token	= 'PUT token here'
+c.ConfigurableHTTPProxy.auth_token	=  binascii.b2a_hex(os.urandom(16))
 
-c.HubAuth.api_token		        = ' PUT token here'
+
+#c.HubAuth.api_token		        = ' PUT token here'
+c.HubAuth.api_token		        = binascii.b2a_hex(os.urandom(16))
+
 
 with open("/etc/jupyterhub/api_token.txt", 'r') as f:
     api_token = f.read().strip()
