@@ -336,7 +336,7 @@ class InstanceSpawner(Spawner):
         start_notebook_cmd = self.cmd + self.get_args()
         start_notebook_cmd = " ".join(start_notebook_cmd)
         self.log.info("Starting user %s jupyterhub" % self.user.name)
-        print ("%s %s --user=%s --notebook-dir=/home/%s/ > /tmp/jupyter.log 2>&1 &" % (lenv, start_notebook_cmd,self.user.name,self.user.name) ) 
+        #print ("%s %s --user=%s --notebook-dir=/home/%s/ > /tmp/jupyter.log 2>&1 &" % (lenv, start_notebook_cmd,self.user.name,self.user.name) ) 
         with settings(**FABRIC_DEFAULTS, host_string=worker_ip_address_string):
              yield sudo("%s %s --user=%s --notebook-dir=/home/%s/ --allow-root > /tmp/jupyter.log 2>&1 &" % (lenv, start_notebook_cmd,self.user.name,self.user.name),  pty=False)
              #If notebook does not as root then use the command below.
