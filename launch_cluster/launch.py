@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
 This sets up a JypyterHub cluster.  This script requires Python 2.7 due to Fabric
 not being Python 3 compatible
@@ -132,7 +132,7 @@ def setup_manager(server_params,config, manager_ip_address):
     sudo("apt-get -qq -y update")
     #sudo("apt-get -qq -y install -q python3.4 python3-pip sqlite sysv-rc-conf", quiet=True)
     sudo("apt-get -qq -y install -q python3-pip sqlite sysv-rc-conf", quiet=True)
-    sudo ("pip3 install --force-reinstall --upgrade pip")
+    sudo ("/usr/bin/pip3 install --force-reinstall --upgrade pip")
     #sudo("easy_install3 pip", quiet=True)
     sudo("pip3 --quiet install ipython nbgrader", quiet=True)
     # Sets up jupyterhub components
@@ -362,8 +362,7 @@ def retry(function, *args, **kwargs):
     max_retries = kwargs.pop("max_retries", 10)
     timeout = kwargs.pop("timeout", 3)
     for i in range(max_retries):
-        print ".",
-        sys.stdout.flush()
+        print (".", sys.stdout.flush())
         try:
             return function(*args, **kwargs)
         except (ClientError, NetworkError, WaiterError) as e:

@@ -96,3 +96,16 @@ if os.path.isfile('/etc/jupyterhub/userlist'):
             whitelist.add(name)
             if len(parts) > 1 and parts[1] == 'admin':
                 admin.add(name)
+
+
+
+################## cull idle server ################################
+cull_id = 'python3 /etc/jupyterhub/cull_idle_servers.py --url=http://' + localip + ':8081/hub/api --timeout=3600'
+c.JupyterHub.services = [
+    {
+        'name': 'cull-idle',
+        'admin': True,
+        'command': cull_id.split(),
+    }
+]
+

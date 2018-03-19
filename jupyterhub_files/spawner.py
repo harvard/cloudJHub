@@ -21,13 +21,14 @@ def get_local_ip_address():
     s.close()
     return ip_address
 
-LONG_RETRY_COUNT = 120
-
-HUB_MANAGER_IP_ADDRESS = get_local_ip_address()
-NOTEBOOK_SERVER_PORT = 4444
-
 with open("/etc/jupyterhub/server_config.json", "r") as f:
     SERVER_PARAMS = json.load(f) # load local server parameters
+
+LONG_RETRY_COUNT = 120
+HUB_MANAGER_IP_ADDRESS = get_local_ip_address()
+NOTEBOOK_SERVER_PORT = 4444
+WORKER_USERNAME  = SERVER_PARAMS["WORKER_USERNAME"]
+
 
 WORKER_TAGS = [ #These tags are set on every server created by the spawner
     {"Key": "Name", "Value": SERVER_PARAMS["WORKER_SERVER_NAME"]},
@@ -216,7 +217,7 @@ class InstanceSpawner(Spawner):
                 # ps -ef | grep -c jupyterhub-singleuser: false positives can occur from other calls to this method.
                 for line in output.splitlines(): #
                     #if "jupyterhub-singleuser" and NOTEBOOK_SERVER_PORT in line:
-                    if "jupyterhub-singleuser" and "4444" in line:
+                    if "jupyterhub-singleuser" and str(NOTEBOOK_SERVER_PORT)  in line:
                         self.log.debug("the following notebook is definitely running:")
                         self.log.debug(line)
                         return True
@@ -288,8 +289,7 @@ class InstanceSpawner(Spawner):
             yield sudo(" echo \" %s ALL=(ALL) NOPASSWD:ALL \" > /etc/sudoers.d/%s " % (self.user.name,self.user.name), user="root",  pty=False)
         return True
     
-    
-    def user_env(self, env): 
+    def user_env_ifNotebook_not_root(self, env): 
         """Augment environment of spawned process with user specific env variables.""" 
         import pwd 
         env['USER'] = self.user.name 
@@ -302,7 +302,17 @@ class InstanceSpawner(Spawner):
         if shell: 
             env['SHELL'] = shell
         return env 
+    
+    def user_env(self, env): 
+        """Augment environment of spawned process with user specific env variables.""" 
+        import pwd 
+        # These will be empty if undefined, 
+        # in which case don't set the env: 
+        env['HOME'] = '/home/' + self.user.name
+        env['SHELL'] = '/bin/bash'
+        return env 
 
+ 
     def get_env(self):
         """Get the complete set of environment variables to be set in the spawned process."""
         env = super().get_env()
@@ -326,8 +336,11 @@ class InstanceSpawner(Spawner):
         start_notebook_cmd = self.cmd + self.get_args()
         start_notebook_cmd = " ".join(start_notebook_cmd)
         self.log.info("Starting user %s jupyterhub" % self.user.name)
+        print ("%s %s --user=%s --notebook-dir=/home/%s/ > /tmp/jupyter.log 2>&1 &" % (lenv, start_notebook_cmd,self.user.name,self.user.name) ) 
         with settings(**FABRIC_DEFAULTS, host_string=worker_ip_address_string):
-             yield sudo("%s %s --user=%s --notebook-dir=/home/%s/ > /tmp/jupyter.log 2>&1 &" % (lenv, start_notebook_cmd,self.user.name,self.user.name), user=self.user.name, pty=False)
+             yield sudo("%s %s --user=%s --notebook-dir=/home/%s/ --allow-root > /tmp/jupyter.log 2>&1 &" % (lenv, start_notebook_cmd,self.user.name,self.user.name),  pty=False)
+             #If notebook does not as root then use the command below.
+             #yield sudo("%s %s --user=%s --notebook-dir=/home/%s/ > /tmp/jupyter.log 2>&1 &" % (lenv, start_notebook_cmd,self.user.name,self.user.name), user=self.user.name, pty=False)
 
         self.log.debug("just started the notebook for user %s, waiting." % self.user.name)
         # self.notebook_should_be_running = True
