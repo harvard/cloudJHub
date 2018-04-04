@@ -83,24 +83,34 @@ From IAM -> Policies -> Create Policy -> Create Your Own Policy -> Policy Name :
 From IAM -> Roles -> Create New Role -> Select role type -> AWS Service Role: Amazon EC2 (Select) -> Attach Policy : jupyter_role ->
 Role Name: jupyter_role -> Create Role
 
-Write Down the ARN profile "arn:aws:iam::063463463463:instance-profile/jupyter_role" as it will be needed later to launch the cluster.
+Write Down the ARN profile **arn:aws:iam::063463463463:instance-profile/jupyter_role** as it will be needed later to launch the cluster.
 
 
 ### SSH Keys
 
 The ssh key will be used by the the machine that will launch the script to access and configure jupytehub manger(s).
-And it will be used by the cluster managers to access the users ipython notebook instances. 
+
+It also will be used by the cluster managers to access the users ipython notebook instances. 
+
 To create the key:
-AWS Console -> EC2 Dashbord -> Key Pairs -> Create Key Pair -> Key pair name: jupyter_key 
-Save the private key "jupyter_key.pem" and send it to the machine that will run the launch script to create jupyterhub manager(s).
+
+AWS Console -> EC2 Dashbord -> Key Pairs -> Create Key Pair -> Key pair name: **jupyter_key** 
+
+Save the private key **jupyter_key.pem** and send it to the machine that will run the launch script to create jupyterhub manager(s).
+
+change the permission of **jupyter_key.pem** to **0600**
 
 
 ### EC2 to launch Jupyterhub manager(s)
 
 Create EC2 instance in the a public subnet with "jupyter_role" role. This instance will be used to create jupyterhub cluster manager.
+
 User Amazon CentOS7 AMI or a recent ubuntu AMI.
+
 Assume the instance IP is : **54.224.174.155**
+
 Assume the user name to login to the instance is : ec2-user(default user on Amazon CentOS AMI)  or ubuntu(default user on ubuntu AMI )
+
 Note that : CentOS AMI is not tested.
 
 
@@ -111,7 +121,7 @@ centos: scp jupyter_key.pem ec2-user@54.224.174.155:/home/ec2-user/.ssh
 
 ubuntu: scp jupyter_key.pem ubuntu@54.224.174.155:/home/ubuntu/.ssh
 
-Note: make sure the key have the right permission (600)
+Note: make sure the key have the right permission (0600)
 
 
 ### login to the launcher EC2 
