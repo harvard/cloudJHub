@@ -235,9 +235,16 @@ launch_cluster/launch.py --worker_instance_type t2.small --custom_worker_ami ami
 
 It might take between 10 to 20 minutes for the code to finish and the cluster to be ready.
 
-Login to the new cluster manager 
-In AWS EC2 dashboard, get the public IP of the manager you just created. The manager EC2 instance will have tag key "Name": and tag Value :"JUPYTER_HUB_[AZ]_seas_jupyterhub_May1717_MANAGER".
-Browse to https://{MANAGER IP} (or http://{MANAGER IP} if you did not configure the SSL certificate),
+## Login to the new cluster manager 
+
+In AWS EC2 dashboard, get the public IP of the manager just created. 
+
+The manager EC2 instance will have tag key "Name": and tag Value :"JUPYTER_HUB_[AZ]_seas_jupyterhub_May1717_MANAGER".
+
+Browse to https://MANAGER_IP if SSL certificate is used. Or 
+
+Browse to http://MANAGER_IP if you did not configure SSL certificate.
+
 login as user admin (youremail@domain) with empty password (unless you change the authentication before you launch the script).
 
 
