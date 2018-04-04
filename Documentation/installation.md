@@ -32,10 +32,14 @@ From AWS Console -> VPC -> VPC Dashboard -> Start VPC Wizard -> VPC with Public 
 	Create the required roles
 
 You can also use the cloudFormation template,vpc-with-one-managers-and-one-workers-subnets-template.json, we provided to create the VPC and the required subnets. 
+
 Write down the VPC ID, Managers SUBNET ID and the Workers SUBNET ID.For Example : 
-VPC ID : vpc-92929292
-Managers SUBNET ID : subnet-54502979
-Workers SUBNET ID : subnet-fd9bb4b4
+
+VPC ID : **vpc-92929292**
+
+Managers SUBNET ID : **subnet-54502979**
+
+Workers SUBNET ID : **subnet-fd9bb4b4**
  
 
 ### Instance Roles and permissions
