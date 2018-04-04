@@ -89,19 +89,21 @@ To create the key:
 AWS Console -> EC2 Dashbord -> Key Pairs -> Create Key Pair -> Key pair name: jupyter_key 
 Save the private key "jupyter_key.pem" and send it to the machine that will run the launch script to create jupyterhub manager(s).
 
-Create the EC2 GW machine with role (CentOS7 , ubuntu)
+Create a cluster launcher EC2 with role (CentOS7 , ubuntu)
 
-Create EC2 instance in the a public subnet with "jupyter_role" role. This instance will be used to create jupyterhub cluster.
+Create EC2 instance in the a public subnet with "jupyter_role" role. This instance will be used to create jupyterhub cluster manager.
+User Amazon CentOS7 AMI or a recent ubuntu AMI.
 Assume the instance IP is : 54.224.174.155
-Assume user name to login to the instance is : ec2-user or ubuntu
+Assume the user name to login to the instance is : ec2-user(default user on Amazon CentOS AMI)  or ubuntu(default user on ubuntu AMI )
+Note that : CentOS AMI is not tested.
 
 Create the Cluster
 
-# Move the key to the GW machine (IP: 54.224.174.155)
+# Move the SSH private key to the launcher machine (IP: 54.224.174.155)
 centos: scp jupyter_key.pem ec2-user@54.224.174.155:/home/ec2-user/.ssh
 ubuntu: scp jupyter_key.pem ubuntu@54.224.174.155:/home/ubuntu/.ssh
 
-# login to the GW 
+# login to the launcher EC2 
 CentOS: ssh ec2-user@54.224.174.155
 Ubuntu: ssh ubuntu@54.224.174.155
 
@@ -118,7 +120,7 @@ Ubuntu: sudo apt-get install git python3-pip gcc python3-dev libssl-dev -y
 # Install git and clone the repository
 git clone https://github.com/harvard/cloudJHub.git
 
-# cd to the repo folder and install the requirements packages
+# cd to the repo folder and install the required packages in the requirements file
 cd cloudJHub/
 sudo pip3 install -r launch_cluster/requirements.txt
 
@@ -135,7 +137,7 @@ cat > launch_cluster/secure.py << EOF
  KEY_PATH = "/home/ec2-user/.ssh/%s.pem" % KEY_NAME
  MANAGER_IAM_ROLE = "arn:aws:iam::063463463463:instance-profile/jupyter_role"
  VPC_ID = "vpc-92929292"
- EOF
+EOF
 
 # Prepare the users and admins 
 cat > jupyterhub_files/userlist  << EOF
@@ -143,9 +145,13 @@ __tokengeneratoradmin admin
 youremail@domain admin
 EOF
 
-# Prepare the SSL
-# SSL Certificate can be added to the manager during before of after the launch time. To add them beefore the launch then 
-# first copy your ssl certificate and key (say jupyterhub.cer , and jupyterhub.key) to the ssl folder, then
+# SSL Certificate
+
+# If ssl certificates will be used (recomended) then you need to configure Jupyterhub cluster manager to use the certificate. 
+# The certificate can be added to the manager before the manager get launched by the launcher script, or after the launch.
+# To add the certificates and configure the manager to use them before the launch:  
+# copy the ssl certificate and key (say jupyterhub.cer , and jupyterhub.key) to the ssl folder, then
+ cp /PATH/TO/SSL_CERTS jupyterhub_files/ssl/
 # open jupyterhub_files/jupyterhub_config.py, and configure the port, certificates path.
 
 c.JupyterHub.port = 443
