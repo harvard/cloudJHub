@@ -100,6 +100,10 @@ Save the private key **jupyter_key.pem** and send it to the machine that will ru
 
 change the permission of **jupyter_key.pem** to **0600**
 
+```
+chmod 0600 /PATH/TO/jupyter_key.pem 
+```
+
 
 ### EC2 to launch Jupyterhub manager(s)
 
@@ -113,6 +117,7 @@ Assume the user name to login to the instance is : ec2-user(default user on Amaz
 
 Note that : CentOS AMI is not tested.
 
+  
 
 # Create the Cluster
 
@@ -123,24 +128,28 @@ ubuntu: scp jupyter_key.pem ubuntu@54.224.174.155:/home/ubuntu/.ssh
 
 Note: make sure the key have the right permission (0600)
 
+  
 
 ### login to the launcher EC2 
 CentOS: ``` ssh ec2-user@54.224.174.155 ```
 
 Ubuntu: ``` ssh ubuntu@54.224.174.155 ```
 
-
+  
 
 ### update the machine
 CentOS: ``` sudo yum update -y ```
 
 Ubuntu: ``` sudo apt-get update -y ```
 
+  
 
 ### Install required packages
 CentOS: ``` sudo yum install git python2-pip gcc python-devel openssl-devel -y ```
 
 Ubuntu: ``` sudo apt-get install git python3-pip gcc python3-dev libssl-dev -y ```
+
+  
 
 ### Clone CloudJHub repository and setup required packages
 ```
@@ -151,6 +160,7 @@ cd cloudJHub/
 sudo pip3 install -r launch_cluster/requirements.txt
 ```
 
+  
 
 ### Prepare the secure.py file. Require: 
 * VPC ID of the VPC created above ,   
@@ -167,6 +177,8 @@ cat > launch_cluster/secure.py << EOF
 EOF
 ```
 
+  
+
 ### Prepare the users and admins 
 ```
 cat > jupyterhub_files/userlist  << EOF
@@ -175,6 +187,7 @@ youremail@domain admin
 EOF
 ```
 
+  
 
 ### SSL Certificate
 
@@ -193,10 +206,14 @@ c.JupyterHub.ssl_cert = '/etc/jupyterhub/ssl/jupyterhub.cer'
 c.JupyterHub.ssl_key = '/etc/jupyterhub/ssl/jupyterhub.key'
 ```
 
+  
+
 ### Authentication 
 Jupyterhub by default configured to use the development authentication with allow authentication with no password. Change the authentication
 from jupyterhub_files/jupyterhub_config.py. You can change it later. For now we will leave it on the default. 
 
+
+  
 
 ### Launch the cluster
 ```
@@ -207,6 +224,8 @@ launch_cluster/launch.py --worker_instance_type t2.small --custom_worker_ami ami
 # Use your AMIs and subnets
 ```
 
+
+  
 
 It might take between 10 to 20 minutes for the code to finish and the cluster to be ready.
 
