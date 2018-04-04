@@ -12,6 +12,8 @@ tag Value : jupyter_{RESOURCENAME}
 
 You don't need to follow our resource tag convention since it used for illustration.
 
+### VPC and Subnets
+
 Create and configure the VPC, Subnets, Internet Gateway and routing tables
 
 From AWS Console -> VPC -> VPC Dashboard -> Start VPC Wizard -> VPC with Public and Private Subnets -> Select 
