@@ -239,7 +239,7 @@ It might take between 10 to 20 minutes for the code to finish and the cluster to
 
 In AWS EC2 dashboard, get the public IP of the manager just created. 
 
-The manager EC2 instance will have tag key "Name": and tag Value :"JUPYTER_HUB_[AZ]_seas_jupyterhub_May1717_MANAGER".
+The manager EC2 instance will have tag key **Name** with Value **JUPYTER_HUB_[AZ]_seas_jupyterhub_May1717_MANAGER**.
 
 Browse to https://MANAGER_IP if SSL certificate is used. Or 
 
