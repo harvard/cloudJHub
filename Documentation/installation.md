@@ -134,36 +134,28 @@ Note: make sure the key have the right permission (0600)
 
   
 
-### login to the launcher EC2 
+### Update the launcher EC2 and install the required packages 
+
 CentOS: 
 
-``` ssh ec2-user@54.224.174.155 ```
+``` 
+ssh ec2-user@54.224.174.155
+
+sudo yum update -y 
+
+sudo yum install git python2-pip gcc python-devel openssl-devel -y
+```
 
 Ubuntu: 
 
-``` ssh ubuntu@54.224.174.155 ```
+``` 
+ssh ubuntu@54.224.174.155
 
-  
+sudo apt-get update -y 
 
-### update the machine
-CentOS: 
+sudo apt-get install git python3-pip gcc python3-dev libssl-dev -y
+```
 
-``` sudo yum update -y ```
-
-Ubuntu: 
-
-``` sudo apt-get update -y ```
-
-  
-
-### Install required packages
-CentOS: 
-``` sudo yum install git python2-pip gcc python-devel openssl-devel -y ```
-
-Ubuntu: 
-``` sudo apt-get install git python3-pip gcc python3-dev libssl-dev -y ```
-
-  
 
 ### Clone CloudJHub repository and setup required packages
 ```
