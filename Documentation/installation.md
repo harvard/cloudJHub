@@ -122,10 +122,12 @@ Note that : CentOS AMI is not tested.
 # Create the Cluster
 
 ### Move the SSH private key to the launcher machine
-centos: 
+centos:
+
 ``` scp jupyter_key.pem ec2-user@54.224.174.155:/home/ec2-user/.ssh ```
 
 ubuntu: 
+
 ``` scp jupyter_key.pem ubuntu@54.224.174.155:/home/ubuntu/.ssh ```
 
 Note: make sure the key have the right permission (0600)
@@ -134,18 +136,22 @@ Note: make sure the key have the right permission (0600)
 
 ### login to the launcher EC2 
 CentOS: 
+
 ``` ssh ec2-user@54.224.174.155 ```
 
 Ubuntu: 
+
 ``` ssh ubuntu@54.224.174.155 ```
 
   
 
 ### update the machine
 CentOS: 
+
 ``` sudo yum update -y ```
 
 Ubuntu: 
+
 ``` sudo apt-get update -y ```
 
   
