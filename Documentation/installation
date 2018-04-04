@@ -113,14 +113,14 @@ Ubuntu: sudo apt-get update -y
 
 # Install required packages
 CentOS: sudo yum install git python2-pip gcc python-devel openssl-devel -y 
-Ubuntu: sudo apt-get install git python-pip gcc python-dev libssl-dev -y
+Ubuntu: sudo apt-get install git python3-pip gcc python3-dev libssl-dev -y
 
 # Install git and clone the repository
 git clone https://github.com/harvard/cloudJHub.git
 
 # cd to the repo folder and install the requirements packages
 cd cloudJHub/
-sudo pip install -r launch_cluster/requirements.txt
+sudo pip3 install -r launch_cluster/requirements.txt
 
 
 # Prepare the secure.py file. Require: 
