@@ -1,4 +1,6 @@
-Requirements
+# AWS Setup
+
+### Requirements
 
 	1. a VPC with two subnets, at least one of them have Internet access.
 	2. a role with permission to manage EC2 instances and roles.
@@ -34,6 +36,7 @@ Managers SUBNET ID : subnet-54502979
 Workers SUBNET ID : subnet-fd9bb4b4
  
 
+### Instance Roles and permissions
 
 Roles are required by the : 
 1. The machine that will launch the script to create the jupytehub mangers (If AWS Access/Secret keys is not used). 
@@ -43,7 +46,7 @@ One role with EC2 management permission and role assignment permission will be s
 
 From IAM -> Policies -> Create Policy -> Create Your Own Policy -> Policy Name : jupyter_role -> Policy Document: 
 
-
+```
 {
     "Version": "2012-10-17",
     "Statement": [
@@ -73,7 +76,7 @@ From IAM -> Policies -> Create Policy -> Create Your Own Policy -> Policy Name :
         }
     ]
 }
-
+```
 
 From IAM -> Roles -> Create New Role -> Select role type -> AWS Service Role: Amazon EC2 (Select) -> Attach Policy : jupyter_role ->
 Role Name: jupyter_role -> Create Role
@@ -81,7 +84,7 @@ Role Name: jupyter_role -> Create Role
 Write Down the ARN profile "arn:aws:iam::063463463463:instance-profile/jupyter_role" as it will be needed later to launch the cluster.
 
 
-Create SSH Keys
+### SSH Keys
 
 The ssh key will be used by the the machine that will launch the script to access and configure jupytehub manger(s).
 And it will be used by the cluster managers to access the users ipython notebook instances. 
@@ -89,47 +92,45 @@ To create the key:
 AWS Console -> EC2 Dashbord -> Key Pairs -> Create Key Pair -> Key pair name: jupyter_key 
 Save the private key "jupyter_key.pem" and send it to the machine that will run the launch script to create jupyterhub manager(s).
 
-Create a cluster launcher EC2 with role (CentOS7 , ubuntu)
+### EC2 to launch Jupyterhub manager(s)
 
 Create EC2 instance in the a public subnet with "jupyter_role" role. This instance will be used to create jupyterhub cluster manager.
 User Amazon CentOS7 AMI or a recent ubuntu AMI.
-Assume the instance IP is : 54.224.174.155
+Assume the instance IP is : **54.224.174.155**
 Assume the user name to login to the instance is : ec2-user(default user on Amazon CentOS AMI)  or ubuntu(default user on ubuntu AMI )
 Note that : CentOS AMI is not tested.
 
-Create the Cluster
+# Create the Cluster
 
-# Move the SSH private key to the launcher machine (IP: 54.224.174.155)
+### Move the SSH private key to the launcher machine
 centos: scp jupyter_key.pem ec2-user@54.224.174.155:/home/ec2-user/.ssh
 ubuntu: scp jupyter_key.pem ubuntu@54.224.174.155:/home/ubuntu/.ssh
+Note: make sure the key have the right permission (600)
 
-# login to the launcher EC2 
+### login to the launcher EC2 
 CentOS: ssh ec2-user@54.224.174.155
 Ubuntu: ssh ubuntu@54.224.174.155
 
-chmod 600 .ssh/jupyter_key.pem 
 
-# update the machine
+### update the machine
 CentOS: sudo yum update -y
 Ubuntu: sudo apt-get update -y
 
-# Install required packages
+### Install required packages
 CentOS: sudo yum install git python2-pip gcc python-devel openssl-devel -y 
 Ubuntu: sudo apt-get install git python3-pip gcc python3-dev libssl-dev -y
 
-# Install git and clone the repository
+### Clone CloudJHub repository and setup required packages
 git clone https://github.com/harvard/cloudJHub.git
-
-# cd to the repo folder and install the required packages in the requirements file
 cd cloudJHub/
 sudo pip3 install -r launch_cluster/requirements.txt
 
 
-# Prepare the secure.py file. Require: 
-# VPC ID of the VPC created above ,   
-# key path and name : for CentOS the path we used "/home/ec2-user/.ssh , for ubuntu is should be /home/ubuntu/.ssh
-# role profile of "jupyter_role" role 
-
+### Prepare the secure.py file. Require: 
+* VPC ID of the VPC created above ,   
+* key path and name : for CentOS the path we used "/home/ec2-user/.ssh , for ubuntu is should be /home/ubuntu/.ssh
+* role profile of "jupyter_role" role 
+```
 cat > launch_cluster/secure.py << EOF
  AWS_ACCESS_KEY_ID = ""
  AWS_SECRET_KEY = ""
@@ -138,39 +139,47 @@ cat > launch_cluster/secure.py << EOF
  MANAGER_IAM_ROLE = "arn:aws:iam::063463463463:instance-profile/jupyter_role"
  VPC_ID = "vpc-92929292"
 EOF
+```
 
-# Prepare the users and admins 
+### Prepare the users and admins 
+```
 cat > jupyterhub_files/userlist  << EOF
 __tokengeneratoradmin admin
 youremail@domain admin
 EOF
+```
 
-# SSL Certificate
 
-# If ssl certificates will be used (recomended) then you need to configure Jupyterhub cluster manager to use the certificate. 
-# The certificate can be added to the manager before the manager get launched by the launcher script, or after the launch.
-# To add the certificates and configure the manager to use them before the launch:  
-# copy the ssl certificate and key (say jupyterhub.cer , and jupyterhub.key) to the ssl folder, then
- cp /PATH/TO/SSL_CERTS jupyterhub_files/ssl/
-# open jupyterhub_files/jupyterhub_config.py, and configure the port, certificates path.
+### SSL Certificate
 
+If ssl certificates will be used (recomended) then you need to configure Jupyterhub cluster manager to use the certificate. 
+The certificate can be added to the manager before the manager get launched by the launcher script, or after the launch.
+To add the certificates and configure the manager to use them before the launch:  
+copy the ssl certificate and key (say jupyterhub.cer , and jupyterhub.key) to the ssl folder, then
+```
+cp /PATH/TO/SSL_CERTS jupyterhub_files/ssl/
+```
+open jupyterhub_files/jupyterhub_config.py, and configure the port, certificates path.
+```
 c.JupyterHub.port = 443
 c.JupyterHub.confirm_no_ssl = False
 c.JupyterHub.ssl_cert = '/etc/jupyterhub/ssl/jupyterhub.cer'
 c.JupyterHub.ssl_key = '/etc/jupyterhub/ssl/jupyterhub.key'
+```
 
-# Authentication 
+### Authentication 
 Jupyterhub by default configured to use the development authentication with allow authentication with no password. Change the authentication
 from jupyterhub_files/jupyterhub_config.py. You can change it later. For now we will leave it on the default. 
 
 
-# Launch the cluster
-# launch_cluster/launch.py --help
-# launch_cluster/launch.py seas_jupyterhub_May1717 ami-41e0b93b subnet-fd9bb4b4 subnet-54502979
+### Launch the cluster
+```
+launch_cluster/launch.py --help
+launch_cluster/launch.py seas_jupyterhub_May1717 ami-41e0b93b subnet-fd9bb4b4 subnet-54502979
 
 launch_cluster/launch.py --worker_instance_type t2.small --custom_worker_ami ami-f3fa8de5 --manager_instance_type t2.medium --ignore_permissions true seas_jupyterhub_May1717 ami-41e0b93b subnet-fd9bb4b4 subnet-54502979
 # Use your AMIs and subnets
-
+```
 
 
 It might take between 10 to 20 minutes for the code to finish and the cluster to be ready.
