@@ -92,6 +92,7 @@ To create the key:
 AWS Console -> EC2 Dashbord -> Key Pairs -> Create Key Pair -> Key pair name: jupyter_key 
 Save the private key "jupyter_key.pem" and send it to the machine that will run the launch script to create jupyterhub manager(s).
 
+
 ### EC2 to launch Jupyterhub manager(s)
 
 Create EC2 instance in the a public subnet with "jupyter_role" role. This instance will be used to create jupyterhub cluster manager.
@@ -99,6 +100,7 @@ User Amazon CentOS7 AMI or a recent ubuntu AMI.
 Assume the instance IP is : **54.224.174.155**
 Assume the user name to login to the instance is : ec2-user(default user on Amazon CentOS AMI)  or ubuntu(default user on ubuntu AMI )
 Note that : CentOS AMI is not tested.
+
 
 # Create the Cluster
 
@@ -109,33 +111,38 @@ ubuntu: scp jupyter_key.pem ubuntu@54.224.174.155:/home/ubuntu/.ssh
 
 Note: make sure the key have the right permission (600)
 
-### login to the launcher EC2 
-CentOS: ssh ec2-user@54.224.174.155
 
-Ubuntu: ssh ubuntu@54.224.174.155
+### login to the launcher EC2 
+CentOS: ``` ssh ec2-user@54.224.174.155 ```
+
+Ubuntu: ``` ssh ubuntu@54.224.174.155 ```
+
 
 
 ### update the machine
-CentOS: sudo yum update -y
+CentOS: ``` sudo yum update -y ```
 
-Ubuntu: sudo apt-get update -y
+Ubuntu: ``` sudo apt-get update -y ```
+
 
 ### Install required packages
-CentOS: sudo yum install git python2-pip gcc python-devel openssl-devel -y
+CentOS: ``` sudo yum install git python2-pip gcc python-devel openssl-devel -y ```
 
-Ubuntu: sudo apt-get install git python3-pip gcc python3-dev libssl-dev -y
+Ubuntu: ``` sudo apt-get install git python3-pip gcc python3-dev libssl-dev -y ```
 
 ### Clone CloudJHub repository and setup required packages
+```
 git clone https://github.com/harvard/cloudJHub.git
 
 cd cloudJHub/
 
 sudo pip3 install -r launch_cluster/requirements.txt
+```
 
 
 ### Prepare the secure.py file. Require: 
 * VPC ID of the VPC created above ,   
-* key path and name : for CentOS the path we used "/home/ec2-user/.ssh , for ubuntu is should be /home/ubuntu/.ssh
+* key path and name : for **CentOS** the path we used **/home/ec2-user/.ssh** , for **ubuntu** user is should be **/home/ubuntu/.ssh**
 * role profile of "jupyter_role" role 
 ```
 cat > launch_cluster/secure.py << EOF
