@@ -104,25 +104,32 @@ Note that : CentOS AMI is not tested.
 
 ### Move the SSH private key to the launcher machine
 centos: scp jupyter_key.pem ec2-user@54.224.174.155:/home/ec2-user/.ssh
+
 ubuntu: scp jupyter_key.pem ubuntu@54.224.174.155:/home/ubuntu/.ssh
+
 Note: make sure the key have the right permission (600)
 
 ### login to the launcher EC2 
 CentOS: ssh ec2-user@54.224.174.155
+
 Ubuntu: ssh ubuntu@54.224.174.155
 
 
 ### update the machine
 CentOS: sudo yum update -y
+
 Ubuntu: sudo apt-get update -y
 
 ### Install required packages
-CentOS: sudo yum install git python2-pip gcc python-devel openssl-devel -y 
+CentOS: sudo yum install git python2-pip gcc python-devel openssl-devel -y
+
 Ubuntu: sudo apt-get install git python3-pip gcc python3-dev libssl-dev -y
 
 ### Clone CloudJHub repository and setup required packages
 git clone https://github.com/harvard/cloudJHub.git
+
 cd cloudJHub/
+
 sudo pip3 install -r launch_cluster/requirements.txt
 
 
