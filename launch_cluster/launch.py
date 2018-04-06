@@ -104,6 +104,7 @@ def launch_manager(config):
         "SUBNET_ID": config.private_subnet_id,
         "JUPYTER_NOTEBOOK_TIMEOUT": int(config.jupyter_notebook_timeout),
         "JUPYTER_MANAGER_IP": instance.public_ip_address,
+        "USER_HOME_EBS_SIZE": config.user_home_ebs_size,
         "MANAGER_IP_ADDRESS": str(instance.private_ip_address),
     }
 
@@ -351,7 +352,16 @@ def validate_config():
             if config.worker_ebs_size <= 0 : 
                 print ("EBS Volume size should be a positive integer number")
                 exit()
-
+    
+    if not isinstance( config.user_home_ebs_size, int ):
+        if not config.user_home_ebs_size.isdigit():
+            print ("EBS Volume size should be a positive integer number")
+            exit()
+        else:
+            config.user_home_ebs_size = int(config.user_home_ebs_size)
+            if config.user_home_ebs_size <= 0 : 
+                print ("EBS Volume size should be a positive integer number")
+                exit()
 
 
 def retry(function, *args, **kwargs):

@@ -325,10 +325,23 @@ class InstanceSpawner(Spawner):
     
     @gen.coroutine
     def setup_user(self, privat_ip):
-        """ setup_user_home"""
-        with settings(**FABRIC_DEFAULTS, host_string=privat_ip):
-            yield sudo("id -u %s &>/dev/null || useradd -m %s -s /bin/bash &>/dev/null" % (self.user.name,self.user.name), user="root",  pty=False)
-            yield sudo(" echo \" %s ALL=(ALL) NOPASSWD:ALL \" > /etc/sudoers.d/%s " % (self.user.name,self.user.name), user="root",  pty=False)
+        """ setup_user_home  """
+        if SERVER_PARAMS["USER_HOME_EBS_SIZE"] > 0:
+            with settings(**FABRIC_DEFAULTS, host_string=privat_ip):
+                yield sudo("mkfs.xfs /dev/%s" %("xvdf") , user="root",  pty=False)
+                yield sudo("mkdir /%s" %(self.user.name), user="root",  pty=False)
+                yield sudo("echo /dev/%s /%s xfs defaults 1 1 >> /etc/fstab" %("xvdf",self.user.name) , user="root",  pty=False)
+                yield sudo("mount -a" , user="root",  pty=False)
+                yield sudo("mkdir /%s/%s" %(self.user.name,self.user.name), user="root",  pty=False)
+                yield sudo("useradd -d /home/%s %s -s /bin/bash  &>/dev/null" % (self.user.name,self.user.name) , user="root",  pty=False)
+                yield sudo("cp -Ri  /home/%s/. /%s/%s/" % ("ubuntu",self.user.name,self.user.name), user="root",  pty=False)
+                yield sudo("ln -s  /%s/%s /home/%s" % (self.user.name, self.user.name,self.user.name), user="root",  pty=False)
+                yield sudo("chown -R %s.%s /home/%s /%s/%s" %(self.user.name,self.user.name,self.user.name,self.user.name,self.user.name), user="root",  pty=False)
+                yield sudo("echo \" %s ALL=(ALL) NOPASSWD:ALL \" > /etc/sudoers.d/%s " % (self.user.name,self.user.name), user="root",  pty=False)
+        else:
+            with settings(**FABRIC_DEFAULTS, host_string=privat_ip):
+                yield sudo("id -u %s &>/dev/null || useradd -m %s -s /bin/bash &>/dev/null" % (self.user.name,self.user.name), user="root",  pty=False)
+                yield sudo(" echo \" %s ALL=(ALL) NOPASSWD:ALL \" > /etc/sudoers.d/%s " % (self.user.name,self.user.name), user="root",  pty=False)
         return True
     
     
@@ -373,13 +386,23 @@ class InstanceSpawner(Spawner):
         self.log.debug("function create_new_instance %s" % self.user.name)
         ec2 = boto3.client("ec2", region_name=SERVER_PARAMS["REGION"])
         resource = boto3.resource("ec2", region_name=SERVER_PARAMS["REGION"])
+        BDM = []
         boot_drive = {'DeviceName': '/dev/sda1',  # this is to be the boot drive
                       'Ebs': {'VolumeSize': SERVER_PARAMS["WORKER_EBS_SIZE"],  # size in gigabytes
                               'DeleteOnTermination': True,
                               'VolumeType': 'gp2',  # This means General Purpose SSD
                               # 'Iops': 1000 }  # i/o speed for storage, default is 100, more is faster
                               }
-                      }
+                     }
+        BDM = [boot_drive]
+        if SERVER_PARAMS["USER_HOME_EBS_SIZE"] > 0:
+            user_drive = {'DeviceName': '/dev/sdf',  # this is to be the user data drive
+                          'Ebs': {'VolumeSize': SERVER_PARAMS["USER_HOME_EBS_SIZE"],  # size in gigabytes
+                                  'DeleteOnTermination': False,
+                                  'VolumeType': 'gp2',  # General Purpose SSD
+                                  }
+                         }
+            BDM = [boot_drive, user_drive]
         # create new instance
         reservation = yield retry(
                 ec2.run_instances,
@@ -390,7 +413,7 @@ class InstanceSpawner(Spawner):
                 InstanceType=SERVER_PARAMS["INSTANCE_TYPE"],
                 SubnetId=SERVER_PARAMS["SUBNET_ID"],
                 SecurityGroupIds=SERVER_PARAMS["WORKER_SECURITY_GROUPS"],
-                BlockDeviceMappings=[boot_drive],
+                BlockDeviceMappings=BDM,
         )
         instance_id = reservation["Instances"][0]["InstanceId"]
         instance = yield retry(resource.Instance, instance_id)
