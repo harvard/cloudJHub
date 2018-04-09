@@ -322,29 +322,28 @@ class InstanceSpawner(Spawner):
         except RemoteCmdExecutionError:
             # terminate instance and create a new one
             raise web.HTTPError(500, "Instance unreachable")
-    
+
     @gen.coroutine
     def setup_user(self, privat_ip):
         """ setup_user_home  """
-        if SERVER_PARAMS["USER_HOME_EBS_SIZE"] > 0:
-            with settings(**FABRIC_DEFAULTS, host_string=privat_ip):
-                yield sudo("mkfs.xfs /dev/%s" %("xvdf") , user="root",  pty=False)
-                yield sudo("mkdir /%s" %(self.user.name), user="root",  pty=False)
-                yield sudo("echo /dev/%s /%s xfs defaults 1 1 >> /etc/fstab" %("xvdf",self.user.name) , user="root",  pty=False)
-                yield sudo("mount -a" , user="root",  pty=False)
-                yield sudo("mkdir /%s/%s" %(self.user.name,self.user.name), user="root",  pty=False)
-                yield sudo("useradd -d /home/%s %s -s /bin/bash  &>/dev/null" % (self.user.name,self.user.name) , user="root",  pty=False)
-                yield sudo("cp -Ri  /home/%s/. /%s/%s/" % ("ubuntu",self.user.name,self.user.name), user="root",  pty=False)
-                yield sudo("ln -s  /%s/%s /home/%s" % (self.user.name, self.user.name,self.user.name), user="root",  pty=False)
-                yield sudo("chown -R %s.%s /home/%s /%s/%s" %(self.user.name,self.user.name,self.user.name,self.user.name,self.user.name), user="root",  pty=False)
-                yield sudo("echo \" %s ALL=(ALL) NOPASSWD:ALL \" > /etc/sudoers.d/%s " % (self.user.name,self.user.name), user="root",  pty=False)
+        if self.user.name == WORKER_USERNAME:
+            pass
         else:
+            if SERVER_PARAMS["USER_HOME_EBS_SIZE"] > 0:
+                with settings(**FABRIC_DEFAULTS, host_string=privat_ip):
+                    yield sudo("mkfs.xfs /dev/%s" %("xvdf") , user="root",  pty=False)
+                    yield sudo("mkdir /jupyteruser", user="root",  pty=False)
+                    yield sudo("echo /dev/%s /jupyteruser xfs defaults 1 1 >> /etc/fstab" %("xvdf") , user="root",  pty=False)
+                    yield sudo("mount -a" , user="root",  pty=False)
             with settings(**FABRIC_DEFAULTS, host_string=privat_ip):
-                yield sudo("id -u %s &>/dev/null || useradd -m %s -s /bin/bash &>/dev/null" % (self.user.name,self.user.name), user="root",  pty=False)
-                yield sudo(" echo \" %s ALL=(ALL) NOPASSWD:ALL \" > /etc/sudoers.d/%s " % (self.user.name,self.user.name), user="root",  pty=False)
+                yield sudo("mkdir -p /jupyteruser" , user="root",  pty=False)
+                yield sudo("useradd -d /home/%s %s -s /bin/bash  &>/dev/null" % (self.user.name,self.user.name) , user="root",  pty=False)
+                yield sudo("cp -R /home/%s /jupyteruser/%s" % (WORKER_USERNAME,self.user.name), user="root",  pty=False)
+                yield sudo("ln -s /jupyteruser/%s /home/%s" % (self.user.name,self.user.name), user="root",  pty=False)
+                yield sudo("chown -R %s.%s /home/%s /jupyteruser/%s" %(self.user.name,self.user.name,self.user.name,self.user.name), user="root",  pty=False)
+                yield sudo("echo \" %s ALL=(ALL) NOPASSWD:ALL \" > /etc/sudoers.d/%s " % (self.user.name,self.user.name), user="root",  pty=False)
         return True
-    
-    
+
     def user_env(self, env): 
         """Augment environment of spawned process with user specific env variables.""" 
         import pwd 
