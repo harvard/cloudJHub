@@ -318,7 +318,7 @@ class InstanceSpawner(Spawner):
             self.log.error("\n\n\n\nabout to check if notebook is running before launching\n\n\n\n")
             notebook_running = yield self.is_notebook_running(instance.private_ip_address)
             if not notebook_running:
-                yield self.remote_notebook_start(instance.private_ip_address)
+                yield self.remote_notebook_start(instance)
         except RemoteCmdExecutionError:
             # terminate instance and create a new one
             raise web.HTTPError(500, "Instance unreachable")
@@ -364,7 +364,7 @@ class InstanceSpawner(Spawner):
 
     
     @gen.coroutine
-    def remote_notebook_start(self, worker_ip_address_string):
+    def remote_notebook_start(self, instance):
         """ Do notebook start command on the remote server."""
         # Setup environments
         env = self.get_env()
@@ -373,12 +373,17 @@ class InstanceSpawner(Spawner):
             lenv = lenv + key + "=" + env[key] + " "
         # End setup environment
         self.log.debug("function remote_server_start %s" % self.user.name)
+        worker_ip_address_string = instance.private_ip_address
         start_notebook_cmd = self.cmd + self.get_args()
         start_notebook_cmd = " ".join(start_notebook_cmd)
         self.log.info("Starting user %s jupyterhub" % self.user.name)
         with settings(user = self.user.name, key_filename = FABRIC_DEFAULTS["key_filename"],  host_string=worker_ip_address_string):
              yield sudo("%s %s --user=%s --notebook-dir=/home/%s/ --allow-root > /tmp/jupyter.log 2>&1 &" % (lenv, start_notebook_cmd,self.user.name,self.user.name),  pty=False)
         self.log.debug("just started the notebook for user %s, waiting." % self.user.name)
+        try:
+            self.user.settings[self.user.name] = instance.public_ip_address
+        except:
+            self.user.settings[self.user.name] = ""
         # self.notebook_should_be_running = True
         yield self.is_notebook_running(worker_ip_address_string, attempts=30)
         
