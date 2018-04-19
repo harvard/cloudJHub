@@ -20,7 +20,7 @@ from time import sleep
 
 #################################################################################################
 
-# Note: DO NOT USE THIS SCRIPT UNLESS YOU KNOW WHAT ARE YOU DOING
+# Note: DO NOT USE THIS SCRIPT UNLESS YOU KNOW WHAT YOU ARE DOING
 
 #################################################################################################
 
@@ -66,6 +66,6 @@ def delete_all_users_ec2s():
     print("Deleting done")
 
 
-#Uncomment the section below
+#uncomment the line below to call the function
 #delete_all_users_ec2s()
 
