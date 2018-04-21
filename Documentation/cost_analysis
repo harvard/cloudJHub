@@ -28,7 +28,7 @@ Monthly cost  = M +  N  * (T     * A  + SS * (SC   + PC  ) )
               = 34 + 20 * (0.047 * 30 + 3  * (0.05 + 0.05) ) =  34 + 29.5 =~ $68
 
 Special cases: 
-If the 20 users never use the system then A (Average hours usage per user per month) would be Zero, then the monthly cost will 
-be the cost of the manager = $34
-If the 20 users abuse the system by running their notebooks 24 * 7 then A will be 720 and the total cost will be:
+If the 20 users never used the system then A (Average hours usage per user per month) would be Zero, therefore the monthly cost will 
+be the cost of the manager only which is $34 in this case.
+If the 20 users abuse the system by running their notebooks 24 * 7 then A will be 720 hours,  and the total cost will be:
 34 + 20 * (0.047 * 720 + 3  * (0.05 + 0.05) ) = $717
