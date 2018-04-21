@@ -28,6 +28,6 @@ Monthly cost  = M +  N  * (T     * A  + SS * (SC   + PC  ) )
               = 34 + 20 * (0.047 * 30 + 3  * (0.05 + 0.05) ) =  34 + 29.5 =~ $68
 
 Special cases: 
-What is the cost of jupyterhub cluster would be if:
-The 20 users logged in once but did not use the system, A=0 ? 
-They abuse the system by running their notebooks 24 * 7, A= 720 ? 
+If the 20 users never use the system then A (Average hours usage per user per month) would be Zero, then the monthly cost will be the cosst of the manager only 
+If the 20 users abuse the system by running their notebooks 24 * 7 then A will be 720 and the total cost will be:
+34 + 20 * (0.047 * 720 + 3  * (0.05 + 0.05) ) = $717
