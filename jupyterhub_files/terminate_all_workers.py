@@ -55,9 +55,11 @@ def check_user_ec2(userid):
 def delete_all_users_ec2s():
     servers = Server.select()
     instance_ids = [server.server_id for server in servers]
-    # if instance_ids is empty then filter will return all the EC2s
-    # then all EC2s will be deleted , which is dangerous , therefore
-    # instance_ids should have value if terminate will be used.
+    # if instance_ids is empty (i.e no single ec2 instance yet created for a user), 
+    # then the functionec2.instances.filter below will 
+    # return all the EC2 instances in your environment and apply
+    # the termination on them. Therefore it is important to check that the
+    # instance_ids have value before calling the terminate function.
     if instance_ids:
         # deletes user/worker instances
         ec2.instances.filter(InstanceIds=instance_ids).terminate()
