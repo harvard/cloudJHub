@@ -1,7 +1,7 @@
 {
   "AWSTemplateFormatVersion" : "2010-09-09",
 
-  "Description" : "AWS CloudFormation Template to create a VPC with one public subnet for jupyterhub EC2 manager(s) and one private subnet for users' notebook EC2 workers",
+  "Description" : "AWS CloudFormation Template to create a VPC with one public subnet for jupyterhub manager(s) and one private subnet for users' notebook EC2 workers",
 
   "Mappings" : {
     "SubnetConfig" : {
