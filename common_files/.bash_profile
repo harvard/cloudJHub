@@ -5,7 +5,7 @@ alias p="nano ~/.bash_profile; source ~/.bash_profile"
 alias log="tail -f /var/log/jupyterhub"
 alias conf="n /etc/jupyterhub/jupyterhub_config.py"
 alias init="n /etc/init.d/jupyterhub"
-alias boot_script="n /etc/init.d/efs_mount"
+#alias boot_script="n /etc/init.d/efs_mount"
 alias cron_jupyterhub="n /etc/cron.d/jupyterhub_cron"
 
 #kill and delete ALL containers on this machine
