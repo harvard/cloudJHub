@@ -98,7 +98,6 @@ def cull_idle(url, api_token, timeout):
 
         #extract last activity time, determine cullability of the server.
         last_activity = parse_date(user['last_activity'])
-        #should_cull = last_activity < cull_limit
         should_cull = last_activity.replace(tzinfo=None)  < cull_limit.replace(tzinfo=None)
         user_name = user['name']
         app_log.debug("checking %s, last activity: %s, server: %s" % (user_name, last_activity, user['server']) )
