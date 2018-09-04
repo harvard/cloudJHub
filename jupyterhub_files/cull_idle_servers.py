@@ -50,9 +50,9 @@ def retry(function, *args, **kwargs):
         except (ClientError, WaiterError) as e:
             app_log.warn("encountered %s, waiting for %s seconds before retrying..." % (type(e), timeout) )
             yield sleep(timeout)
-        else:
-            print("Failure in %s with args %s and kwargs %s" % (function.__name__, args, kwargs))
-            raise e
+     else:
+         print("Failure in %s with args %s and kwargs %s" % (function.__name__, args, kwargs))
+         #raise e
 
 @coroutine
 def manually_kill_server(user_name):
