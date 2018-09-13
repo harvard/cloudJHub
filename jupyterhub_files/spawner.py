@@ -3,6 +3,7 @@ import logging
 import socket
 import boto3
 from fabric.api import env, sudo as _sudo, run as _run
+from fabric.operations import put as _put
 from fabric.context_managers import settings
 from fabric.exceptions import NetworkError
 from paramiko.ssh_exception import SSHException, ChannelException
@@ -65,6 +66,10 @@ def run(*args, **kwargs):
     ret = yield retry(_run, *args, **kwargs, quiet=FABRIC_QUIET)
     return ret
 
+@gen.coroutine
+def put(*args, **kwargs):
+    ret = yield retry(_put, *args, **kwargs)
+    return ret
     
 @gen.coroutine
 def retry(function, *args, **kwargs):
@@ -312,40 +317,56 @@ class InstanceSpawner(Spawner):
             # Wait for server to finish booting...
             wait_result = yield self.wait_until_SSHable(instance.private_ip_address,max_retries=LONG_RETRY_COUNT)
             # If first time server then setup the user name
-            if new_server:
+            is_user_setup = yield self.is_user_setup(instance.private_ip_address)
+            if not is_user_setup:
                 yield self.setup_user(instance.private_ip_address)
             #start notebook
             self.log.error("\n\n\n\nabout to check if notebook is running before launching\n\n\n\n")
             notebook_running = yield self.is_notebook_running(instance.private_ip_address)
             if not notebook_running:
                 yield self.remote_notebook_start(instance)
-        except RemoteCmdExecutionError:
+        except RemoteCmdExecutionError as e:
             # terminate instance and create a new one
+            self.log.exception(e)
             raise web.HTTPError(500, "Instance unreachable")
 
     @gen.coroutine
     def setup_user(self, privat_ip):
         """ setup_user_home  """
         if self.user.name == WORKER_USERNAME:
+            self.log.info("Skipping setup for user %s (worker username)" % self.user.name)
             pass
         else:
-            if SERVER_PARAMS["USER_HOME_EBS_SIZE"] > 0:
-                with settings(**FABRIC_DEFAULTS, host_string=privat_ip):
-                    yield sudo("mkfs.xfs /dev/%s" %("xvdf") , user="root",  pty=False)
-                    yield sudo("mkdir /jupyteruser", user="root",  pty=False)
-                    yield sudo("echo /dev/%s /jupyteruser xfs defaults 1 1 >> /etc/fstab" %("xvdf") , user="root",  pty=False)
-                    yield sudo("mount -a" , user="root",  pty=False)
+            self.log.info("Starting user setup for %s" % self.user.name)
             with settings(**FABRIC_DEFAULTS, host_string=privat_ip):
-                yield sudo("mkdir -p /jupyteruser" , user="root",  pty=False)
-                yield sudo("useradd -d /home/%s %s -s /bin/bash  &>/dev/null" % (self.user.name,self.user.name) , user="root",  pty=False)
-                yield sudo("cp -R /home/%s /jupyteruser/%s" % (WORKER_USERNAME,self.user.name), user="root",  pty=False)
-                yield sudo("ln -s /jupyteruser/%s /home/%s" % (self.user.name,self.user.name), user="root",  pty=False)
-                yield sudo("chown -R %s.%s /home/%s /jupyteruser/%s" %(self.user.name,self.user.name,self.user.name,self.user.name), user="root",  pty=False)
-                yield sudo("echo \" %s ALL=(ALL) NOPASSWD:ALL \" > /etc/sudoers.d/%s " % (self.user.name,self.user.name), user="root",  pty=False)
-                # uncomment the line below to setup a default password for the user.
-                #yield sudo('echo -e "%s\n%s" | passwd %s' % (self.user.name,self.user.name,self.user.name), pty=False)
+                user_home_device = ""
+                if SERVER_PARAMS["USER_HOME_EBS_SIZE"] > 0:
+                    user_home_device = "xvdf"
 
+                local_script_name = "setup_jupyteruser.sh"
+                remote_script_name = "/tmp/%s" % local_script_name
+                self.log.info("Uploading %s to %s..." % (local_script_name, remote_script_name))
+                put_result = yield put(local_script_name, remote_script_name, mode="0755")
+                self.log.info("Upload success: %s" % put_result.succeeded)
+
+                script_command = "JUPYTERUSER=%s JUPYTERDEVICE=%s %s" % (self.user.name, user_home_device, remote_script_name)
+                self.log.info("Executing %s..." % script_command)
+                exec_result = yield sudo(script_command, user="root", pty=False)
+                self.log.info("Execution success: %s" % exec_result.return_code == 0)
+            self.log.info("Finished user setup for %s" % self.user.name)
         return True
+
+    @gen.coroutine
+    def is_user_setup(self, privat_ip):
+        self.log.debug("function is_user_setup for user %s" % self.user.name)
+        is_setup = False
+        with settings(**FABRIC_DEFAULTS, host_string=privat_ip):
+            command = "id -u {user} &>/dev/null && test -e /home/{user} && test $(stat --format '%U' '/jupyteruser/{user}') = '{user}'".format(user=self.user.name)
+            self.log.debug("about to run command: %s" % command)
+            result = yield run(command)
+            is_setup = result.return_code == 0
+        self.log.debug("return is_user_setup %s for user %s" % (is_setup, self.user.name))
+        return is_setup
 
     def user_env(self, env): 
         """Augment environment of spawned process with user specific env variables.""" 
