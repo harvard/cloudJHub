@@ -344,9 +344,10 @@ class InstanceSpawner(Spawner):
                     user_home_device = "xvdf"
 
                 local_script_name = "setup_jupyteruser.sh"
+                local_script_path = "/etc/jupyterhub/%s" % local_script_name
                 remote_script_name = "/tmp/%s" % local_script_name
                 self.log.info("Uploading %s to %s..." % (local_script_name, remote_script_name))
-                put_result = yield put(local_script_name, remote_script_name, mode="0755")
+                put_result = yield put(local_script_path, remote_script_name, mode="0755")
 
                 if put_result.succeeded:
                     self.log.info("Upload success for %s" % local_script_name)
