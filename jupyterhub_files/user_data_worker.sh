@@ -14,6 +14,8 @@ if [ -n "{device}" ]; then
     mkfs.xfs /dev/{device}
     echo "/dev/{device} /jupyteruser xfs defaults 1 1" >> /etc/fstab
     mount -a
+else
+    : # No-op. If no device is specified, use the root device and continue with user account setup
 fi
 
 # Setup the user account and home directory
