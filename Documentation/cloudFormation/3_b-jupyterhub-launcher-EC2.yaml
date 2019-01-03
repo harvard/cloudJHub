@@ -56,7 +56,7 @@ Parameters:
   LauncherInstanceProfileName:
     Description: IAM role profile name for the launcher EC2
     Type: String
-    Default: JupyterHub-Launcher-Profile-Name
+    Default: JupyterHub-Launcher-Profile
     ConstraintDescription: "JupyterHub Launcher profile name "
 
 Resources:
