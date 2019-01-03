@@ -102,10 +102,8 @@ Resources:
               pip3 install --upgrade pip 
               hostnamectl set-hostname  ${HOSTNAME} --static
               /usr/bin/ssh-keyscan github.com 2>&1 | grep rsa > /root/.ssh/known_hosts
-              /usr/bin/git clone https://github.com/harvard/cloudJHub.git /tmp/cloudJHub
-              chown -R ${USERNAME}.${USERNAME} /tmp/cloudJHub
-              #cat > /tmp/cloudJHub/launch_cluster/secure.py << EOF
-              cat > /tmp/secure.py << EOF
+              /usr/bin/git clone https://github.com/harvard/cloudJHub.git /opt/cloudJHub
+              cat > /opt/secure.py << EOF
               AWS_ACCESS_KEY_ID = ""
               AWS_SECRET_KEY = ""
               KEY_NAME = ${KEYNAME}
@@ -113,12 +111,13 @@ Resources:
               MANAGER_IAM_ROLE = ${MANAGERROLE}
               VPC_ID = ${VPCID}
               EOF
-              #cat > /tmp/cloudJHub/launch_cluster/launch-cluseter.sh << EOF
-              cat > /tmp/launch-cluster-cmd.sh << EOF
-              cd /tmp/cloudJHub 
+              cat > /opt/launch-cluster-cmd.sh << EOF
+              cd /opt/cloudJHub
               launch_cluster/launch.py ${CLUSTERNAME} ${AMI} ${WORKERSSUBNET} ${MANAGERSUBNET}"
               EOF
-              cp /tmp/secure.py /tmp/cloudJHub/launch_cluster/
+              cp /opt/secure.py /opt/cloudJHub/launch_cluster/
+              chmod +x /opt/launch-cluster-cmd.sh
+              chown -R ${USERNAME} /opt
 
             - USERNAME: !Ref UserName
               HOSTNAME: !Ref HostName
