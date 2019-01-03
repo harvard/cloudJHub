@@ -132,7 +132,8 @@ def setup_manager(server_params,config, manager_ip_address):
     # Common installs: python 3
     sudo("apt-get -qq -y update")
     #sudo("apt-get -qq -y install -q python3.4 python3-pip sqlite sysv-rc-conf", quiet=True)
-    sudo("apt-get -qq -y install -q python3-pip sqlite sysv-rc-conf", quiet=True)
+    #sudo("apt-get -qq -y install -q python3-pip sqlite sysv-rc-conf", quiet=True)   <--- And remove this
+    sudo("apt-get -qq -y install -q python3-pip sqlite", quiet=True)
     sudo ("/usr/bin/pip3 install --force-reinstall --upgrade pip")
     #sudo("easy_install3 pip", quiet=True)
     sudo("pip3 --quiet install ipython nbgrader", quiet=True)
@@ -142,23 +143,24 @@ def setup_manager(server_params,config, manager_ip_address):
     # pip installs
     sudo("pip3 install --quiet -r /var/tmp/jupyterhub_files/requirements_jupyterhub.txt")
     # apt-get installs for jupyterhub
-    sudo("apt-get -qq -y install -q nodejs-legacy npm")
+    #sudo("apt-get -qq -y install -q nodejs-legacy npm") <---- And remove this
+    sudo("apt-get -qq -y install -q nodejs npm")
     # npm installs for the jupyterhub proxy
     sudo("npm install -q -g configurable-http-proxy")
     # move init script into place so we can have jupyterhub run as a "service".
     sudo("cp /var/tmp/jupyterhub_files/jupyterhub_service.sh /etc/init.d/jupyterhub")
     sudo("chmod +x /etc/init.d/jupyterhub")
     sudo("systemctl daemon-reload")
-    sudo("sysv-rc-conf --level 5 jupyterhub on")
+    #sudo("sysv-rc-conf --level 5 jupyterhub on")   <--- And remove this
     # Put the server_params dict into the environment
     sudo("echo '%s' > /etc/jupyterhub/server_config.json" % json.dumps(server_params))
     # Generate a token value for use in making authenticated calls to the jupyterhub api
     # Note: this value cannot be put into the server_params because the file is imported in our spawner
     sudo("/usr/local/bin/jupyterhub token -f /etc/jupyterhub/jupyterhub_config.py __tokengeneratoradmin > /etc/jupyterhub/api_token.txt")
     # start jupyterhub
-    sudo("service jupyterhub start", pty=False)
+    #sudo("service jupyterhub start", pty=False)     <--- And remove this
     # move our cron script into place
-    sudo("cp /etc/jupyterhub/jupyterhub_cron.txt /etc/cron.d/jupyterhub_cron")
+    #sudo("cp /etc/jupyterhub/jupyterhub_cron.txt /etc/cron.d/jupyterhub_cron")   <--- And remove this
     if not config.custom_worker_ami:
         logger.info("Manager server successfully launched. Please wait 15 minutes for the worker server AMI image to become available. No worker servers (and thus, no user sessions) can be launched until the AMI is available.")
     # TODO: generate ssl files and enable jupyterhub ssl
@@ -180,8 +182,10 @@ def make_worker_ami(config, ec2, security_group_list):
 
     sudo("apt-get -qq -y update")
     sudo("apt-get -qq -y install -q python python-setuptools python-dev")
-    sudo("easy_install pip")
-    sudo ("apt-get -qq -y install -q python3-pip sqlite sysv-rc-conf")
+    #sudo("easy_install pip") <--- And remove this
+    sudo("apt-get install python-pip")  <--- And add this
+    sudo("apt-get -qq -y install -q python3-pip sqlite")
+    #sudo ("apt-get -qq -y install -q python3-pip sqlite sysv-rc-conf") <--- And remove this
     sudo ("pip3 install --force-reinstall --upgrade pip")
 
 
@@ -333,6 +337,7 @@ def validate_config():
     """ Checks key file permissions """
     if config.ignore_permissions == "false":
         permissions = oct(os.stat(KEY_PATH).st_mode % 2 ** 9)
+        #if permissions[2:] != "600":   <--- And update this
         if permissions[1:] != "600":
             print("Your key file permissions are %s, they need to be (0)600 "
                   "or else the configuration script will not be able to connect "
