@@ -183,7 +183,7 @@ def make_worker_ami(config, ec2, security_group_list):
     sudo("apt-get -qq -y update")
     sudo("apt-get -qq -y install -q python python-setuptools python-dev")
     #sudo("easy_install pip") <--- And remove this
-    sudo("apt-get install python-pip")  <--- And add this
+    sudo("apt-get install python-pip")  #<--- And add this
     sudo("apt-get -qq -y install -q python3-pip sqlite")
     #sudo ("apt-get -qq -y install -q python3-pip sqlite sysv-rc-conf") <--- And remove this
     sudo ("pip3 install --force-reinstall --upgrade pip")
