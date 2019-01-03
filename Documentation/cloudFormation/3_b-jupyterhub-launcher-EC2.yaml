@@ -98,18 +98,19 @@ Resources:
               chmod 700 /home/${USERNAME}/.ssh
               chmod 600 /home/${USERNAME}/.ssh/authorized_keys
               apt-get update -y 
-              apt-get install git python3-pip gcc python3-dev libssl-dev   -y 
-              pip3 install --upgrade pip 
+              apt-get install git python-pip gcc python-dev libssl-dev   -y 
+              pip2 install --upgrade pip 
               hostnamectl set-hostname  ${HOSTNAME} --static
               /usr/bin/ssh-keyscan github.com 2>&1 | grep rsa > /root/.ssh/known_hosts
               /usr/bin/git clone https://github.com/harvard/cloudJHub.git /opt/cloudJHub
+              /usr/local/bin/pip install -r /opt/cloudJHub/launch_cluster/requirements.txt
               cat > /opt/secure.py << EOF
               AWS_ACCESS_KEY_ID = ""
               AWS_SECRET_KEY = ""
-              KEY_NAME = ${KEYNAME}
-              KEY_PATH =/home/${USERNAME}/.ssh/${KEYNAME}.pem
-              MANAGER_IAM_ROLE = ${MANAGERROLE}
-              VPC_ID = ${VPCID}
+              KEY_NAME = "${KEYNAME}"
+              KEY_PATH = "/home/${USERNAME}/.ssh/${KEYNAME}.pem"
+              MANAGER_IAM_ROLE = "${MANAGERROLE}"
+              VPC_ID = "${VPCID}"
               EOF
               cat > /opt/launch-cluster-cmd.sh << EOF
               cd /opt/cloudJHub
