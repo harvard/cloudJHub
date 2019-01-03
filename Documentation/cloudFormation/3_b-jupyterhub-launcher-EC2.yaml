@@ -113,7 +113,7 @@ Resources:
               EOF
               cat > /opt/launch-cluster-cmd.sh << EOF
               cd /opt/cloudJHub
-              launch_cluster/launch.py ${CLUSTERNAME} ${AMI} ${WORKERSSUBNET} ${MANAGERSUBNET}"
+              launch_cluster/launch.py ${CLUSTERNAME} ${AMI} ${WORKERSSUBNET} ${MANAGERSUBNET}
               EOF
               cp /opt/secure.py /opt/cloudJHub/launch_cluster/
               chmod +x /opt/launch-cluster-cmd.sh
