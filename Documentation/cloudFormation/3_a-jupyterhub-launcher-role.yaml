@@ -1,0 +1,51 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: AWS CloudFormation Template to create a role for Jupyterhub Launcher
+Resources:
+  jupyterhublauncherrole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: !Sub JupyterHub-Launcher-policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action: 'ec2:*'
+                Effect: Allow
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'iam:AddRoleToInstanceProfile'
+                  - 'iam:CreateInstanceProfile'
+                  - 'iam:ListInstanceProfiles'
+                  - 'iam:ListInstanceProfilesForRole'
+                  - 'iam:ListRoles'
+                  - 'iam:RemoveRoleFromInstanceProfile'
+                  - 'iam:GetInstanceProfile'
+                  - 'iam:PassRole'
+                Resource: '*'
+      RoleName: !Sub JupyterHub-Launcher-Role
+  RootInstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      Path: /
+      Roles:
+        - !Ref jupyterhublauncherrole
+      InstanceProfileName: !Sub JupyterHub-Launcher-Profile
+Outputs:
+  Profilearn:
+    Description: Instance profile name of Jupyterhub-Launcher-Profile
+    Value: !GetAtt 
+      - RootInstanceProfile
+      - Arn
+    Export:
+      Name: !Sub JupyterHub-Launcher-Profile
