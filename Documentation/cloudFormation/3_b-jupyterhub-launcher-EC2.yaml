@@ -11,7 +11,7 @@ Parameters:
       - ubuntu
   SSHPublicKey:
     Type: String
-    Default: ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCDNIdOGI/GMhFobWfwWoEf3kiZOy8Cl1trOkL21W/JCxrsboTdZOTbCVm2QRBQR8PhaZECVZC8z55bUlp/6gKJ4PqyPqUuyp1DIdX7CgunNh+17s8XSb7B6d8hXu435ePqJhLtvlSGY54IFgig3/1/zHYKpuVVJONQtLoads2Vxd3oKaw4C/Ax1n5ke754l9VxZ5WH/vFA8ZK98m89BVP2xrJLl6+mncXYfn8gUbDvLIThmH6lB9rVENpK4f8hkQwlvkZ1OVhxw5zSjBWzwJvZmPvZ5HDl90CDC8gca7T7R/1vmAfUZYQLmfxtLlQOmQR8SivK/cf/9TxSiGPp/9nR
+    Default: Insert your public key starts with ssh-rsa to login to the launcher machine
   HostName:
     Type: String
     Default: 'jhub-launcher'
