@@ -3,6 +3,7 @@ import logging
 import socket
 import boto3
 from fabric.api import env, sudo as _sudo, run as _run
+from fabric.operations import put as _put
 from fabric.context_managers import settings
 from fabric.exceptions import NetworkError
 from paramiko.ssh_exception import SSHException, ChannelException
@@ -37,6 +38,11 @@ WORKER_TAGS = [ #These tags are set on every server created by the spawner
     {"Key": "Jupyter Cluster", "Value": SERVER_PARAMS["JUPYTER_CLUSTER"]},
 ]
 
+#User data script to be executed on every worker created by the spawner
+WORKER_USER_DATA = None
+with open("/etc/jupyterhub/user_data_worker.sh", "r") as f:
+    WORKER_USER_DATA = f.read()
+
 thread_pool = ThreadPoolExecutor(100)
 
 #Logging settings
@@ -65,7 +71,11 @@ def run(*args, **kwargs):
     ret = yield retry(_run, *args, **kwargs, quiet=FABRIC_QUIET)
     return ret
 
-    
+@gen.coroutine
+def put(*args, **kwargs):
+    ret = yield retry(_put, *args, **kwargs)
+    return ret
+
 @gen.coroutine
 def retry(function, *args, **kwargs):
     """ Retries a function up to max_retries, waiting `timeout` seconds between tries.
@@ -73,7 +83,7 @@ def retry(function, *args, **kwargs):
         case of boto3, it is necessary because sometimes aws calls return too
         early and a resource needed by the next call is not yet available. """
     max_retries = kwargs.pop("max_retries", 10)
-    timeout = kwargs.pop("timeout", 1)            
+    timeout = kwargs.pop("timeout", 1)
     for attempt in range(max_retries):
         try:
             ret = yield thread_pool.submit(function, *args, **kwargs)
@@ -107,7 +117,7 @@ class InstanceSpawner(Spawner):
             with your log statements, insert a brief sleep into the code where your are logging to allow time for log to
             flush.
         """
-    
+
     @gen.coroutine
     def start(self):
         """ When user logs in, start their instance.
@@ -176,7 +186,7 @@ class InstanceSpawner(Spawner):
         self.log.debug("function stop")
         self.log.info("Stopping user %s instance " % self.user.name)
         try:
-            instance = yield self.get_instance()  
+            instance = yield self.get_instance()
             retry(instance.stop)
             # self.notebook_should_be_running = False
         except Server.DoesNotExist:
@@ -188,7 +198,7 @@ class InstanceSpawner(Spawner):
     def kill_instance(self,instance):
         self.log.debug(" Kill hanged user %s instance:  %s " % (self.user.name,instance.id))
         yield self.stop(now=True)
-        
+
 
     # Check if the machine is hanged
     @gen.coroutine
@@ -217,7 +227,7 @@ class InstanceSpawner(Spawner):
                 # We cannot have this be a long timeout because Jupyterhub uses poll to determine whether a user can log in.
                 # If this has a long timeout, logging in without notebook running takes a long time.
                 # attempts = 30 if self.notebook_should_be_running else 1
-                # check if the machine is hanged 
+                # check if the machine is hanged
                 ec2_run_status = yield self.check_for_hanged_ec2(instance)
                 if ec2_run_status == "SSH_CONNECTION_FAILED":
                     #self.log.debug(ec2_run_status)
@@ -238,7 +248,7 @@ class InstanceSpawner(Spawner):
             self.log.error("Couldn't poll server for user '%s' as it does not exist" % self.user.name)
             # self.notebook_should_be_running = False
             return "Instance not found/tracked"
-    
+
     ################################################################################################################
     ### helpers ###
 
@@ -274,7 +284,7 @@ class InstanceSpawner(Spawner):
            ret = "SSH_CONNECTION_FAILED"
         return (ret)
 
-    
+
     @gen.coroutine
     def get_instance(self):
         """ This returns a boto Instance resource; if boto can't find the instance or if no entry for instance in database,
@@ -298,7 +308,7 @@ class InstanceSpawner(Spawner):
                 Server.remove_server(server.server_id)
                 raise Server.DoesNotExist()
             raise e
-    
+
     @gen.coroutine
     def start_worker_server(self, instance, new_server=False):
         """ Runs remote commands on worker server to mount user EBS and connect to Jupyterhub. If new_server=True,
@@ -311,58 +321,32 @@ class InstanceSpawner(Spawner):
         try:
             # Wait for server to finish booting...
             wait_result = yield self.wait_until_SSHable(instance.private_ip_address,max_retries=LONG_RETRY_COUNT)
-            # If first time server then setup the user name
-            if new_server:
-                yield self.setup_user(instance.private_ip_address)
             #start notebook
             self.log.error("\n\n\n\nabout to check if notebook is running before launching\n\n\n\n")
             notebook_running = yield self.is_notebook_running(instance.private_ip_address)
             if not notebook_running:
                 yield self.remote_notebook_start(instance)
-        except RemoteCmdExecutionError:
+        except RemoteCmdExecutionError as e:
             # terminate instance and create a new one
+            self.log.exception(e)
             raise web.HTTPError(500, "Instance unreachable")
 
-    @gen.coroutine
-    def setup_user(self, privat_ip):
-        """ setup_user_home  """
-        if self.user.name == WORKER_USERNAME:
-            pass
-        else:
-            if SERVER_PARAMS["USER_HOME_EBS_SIZE"] > 0:
-                with settings(**FABRIC_DEFAULTS, host_string=privat_ip):
-                    yield sudo("mkfs.xfs /dev/%s" %("xvdf") , user="root",  pty=False)
-                    yield sudo("mkdir /jupyteruser", user="root",  pty=False)
-                    yield sudo("echo /dev/%s /jupyteruser xfs defaults 1 1 >> /etc/fstab" %("xvdf") , user="root",  pty=False)
-                    yield sudo("mount -a" , user="root",  pty=False)
-            with settings(**FABRIC_DEFAULTS, host_string=privat_ip):
-                yield sudo("mkdir -p /jupyteruser" , user="root",  pty=False)
-                yield sudo("useradd -d /home/%s %s -s /bin/bash  &>/dev/null" % (self.user.name,self.user.name) , user="root",  pty=False)
-                yield sudo("cp -R /home/%s /jupyteruser/%s" % (WORKER_USERNAME,self.user.name), user="root",  pty=False)
-                yield sudo("ln -s /jupyteruser/%s /home/%s" % (self.user.name,self.user.name), user="root",  pty=False)
-                yield sudo("chown -R %s.%s /home/%s /jupyteruser/%s" %(self.user.name,self.user.name,self.user.name,self.user.name), user="root",  pty=False)
-                yield sudo("echo \" %s ALL=(ALL) NOPASSWD:ALL \" > /etc/sudoers.d/%s " % (self.user.name,self.user.name), user="root",  pty=False)
-                # uncomment the line below to setup a default password for the user.
-                #yield sudo('echo -e "%s\n%s" | passwd %s' % (self.user.name,self.user.name,self.user.name), pty=False)
-
-        return True
-
-    def user_env(self, env): 
-        """Augment environment of spawned process with user specific env variables.""" 
-        import pwd 
-        # set HOME and SHELL for the Jupyter process 
+    def user_env(self, env):
+        """Augment environment of spawned process with user specific env variables."""
+        import pwd
+        # set HOME and SHELL for the Jupyter process
         env['HOME'] = '/home/' + self.user.name
         env['SHELL'] = '/bin/bash'
-        return env 
+        return env
 
- 
+
     def get_env(self):
         """Get the complete set of environment variables to be set in the spawned process."""
         env = super().get_env()
         env = self.user_env(env)
         return env
 
-    
+
     @gen.coroutine
     def remote_notebook_start(self, instance):
         """ Do notebook start command on the remote server."""
@@ -386,7 +370,7 @@ class InstanceSpawner(Spawner):
             self.user.settings[self.user.name] = ""
         # self.notebook_should_be_running = True
         yield self.is_notebook_running(worker_ip_address_string, attempts=30)
-        
+
     @gen.coroutine
     def create_new_instance(self):
         """ Creates and boots a new server to host the worker instance."""
@@ -410,6 +394,11 @@ class InstanceSpawner(Spawner):
                                   }
                          }
             BDM = [boot_drive, user_drive]
+
+        # prepare userdata script to execute on the worker instance
+        user_home_device = "xvdf" if SERVER_PARAMS["USER_HOME_EBS_SIZE"] > 0 else ""
+        user_data_script = WORKER_USER_DATA.format(user=self.user.name, device=user_home_device)
+
         # create new instance
         reservation = yield retry(
                 ec2.run_instances,
@@ -421,6 +410,7 @@ class InstanceSpawner(Spawner):
                 SubnetId=SERVER_PARAMS["SUBNET_ID"],
                 SecurityGroupIds=SERVER_PARAMS["WORKER_SECURITY_GROUPS"],
                 BlockDeviceMappings=BDM,
+                UserData=user_data_script,
         )
         instance_id = reservation["Instances"][0]["InstanceId"]
         instance = yield retry(resource.Instance, instance_id)
