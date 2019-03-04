@@ -287,8 +287,12 @@ class InstanceSpawner(Spawner):
 
     @gen.coroutine
     def get_instance(self):
-        """ This returns a boto Instance resource; if boto can't find the instance or if no entry for instance in database,
-            it raises Server.DoesNotExist error and removes database entry if appropriate """
+        #""" This returns a boto Instance resource; if boto can't find the instance or if no entry for instance in database,
+        #    it raises Server.DoesNotExist error and removes database entry if appropriate """
+        """ This returns a boto Instance resource; if no entry for the instance in database,then 
+            it raises Server.DoesNotExist error. If the instance in the database but 
+            boto can't find the instance, it raise 500 http error """
+
         self.log.debug("function get_instance for user %s" % self.user.name)
         server = Server.get_server(self.user.name)
         resource = yield retry(boto3.resource, "ec2", region_name=SERVER_PARAMS["REGION"])
@@ -298,15 +302,17 @@ class InstanceSpawner(Spawner):
             # boto3.Instance is lazily loaded. Force with .load()
             yield retry(ret.load)
             if ret.meta.data is None:
-                Server.remove_server(server.server_id)
-                raise Server.DoesNotExist()
+                raise web.HTTPError(500, "Couldn't access instance for user '%s'. Please try again in a few minutes" % self.user.name)
+                #Server.remove_server(server.server_id)
+                #raise Server.DoesNotExist()
             return ret
         except ClientError as e:
             self.log.error("get_instance client error: %s" % e)
             if "InvalidInstanceID.NotFound" not in str(e):
                 self.log.error("Couldn't find instance for user '%s'" % self.user.name)
-                Server.remove_server(server.server_id)
-                raise Server.DoesNotExist()
+                raise web.HTTPError(500, "Couldn't access instance for user '%s'. Please try again in a few minutes" % self.user.name)
+                #Server.remove_server(server.server_id)
+                #raise Server.DoesNotExist()
             raise e
 
     @gen.coroutine
