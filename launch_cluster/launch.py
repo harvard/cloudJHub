@@ -71,6 +71,9 @@ def launch_manager(config):
         {"Key": "Owner", "Value": config.server_owner},
         {"Key": "Creator", "Value": config.server_owner},
         {"Key": "Jupyter Cluster", "Value": config.cluster_name},
+        {"Key": "platform", "Value": config.platform},
+        {"Key": "environment", "Value": config.environment},
+        {"Key": "product", "Value": config.cluster_name}
     ]
     instance.wait_until_exists()
     instance.wait_until_running()
@@ -106,6 +109,8 @@ def launch_manager(config):
         "JUPYTER_MANAGER_IP": instance.public_ip_address,
         "USER_HOME_EBS_SIZE": config.user_home_ebs_size,
         "MANAGER_IP_ADDRESS": str(instance.private_ip_address),
+        "ENVIRONMENT": config.environment,
+        "PLATFORM": config.platform
     }
 
     # Setup the common files and settings between manager and worker.

@@ -36,6 +36,9 @@ WORKER_TAGS = [ #These tags are set on every server created by the spawner
     {"Key": "Owner", "Value": SERVER_PARAMS["WORKER_SERVER_OWNER"]},
     {"Key": "Creator", "Value": SERVER_PARAMS["WORKER_SERVER_OWNER"]},
     {"Key": "Jupyter Cluster", "Value": SERVER_PARAMS["JUPYTER_CLUSTER"]},
+    {"Key": "environment", "Value": SERVER_PARAMS["ENVIRONMENT"]},
+    {"Key": "platform", "Value": SERVER_PARAMS["PLATFORM"]},
+    {"Key": "product", "Value": SERVER_PARAMS["JUPYTER_CLUSTER"]}
 ]
 
 #User data script to be executed on every worker created by the spawner
