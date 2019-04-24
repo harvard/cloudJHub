@@ -26,6 +26,7 @@ with open("/etc/jupyterhub/server_config.json", "r") as f:
     SERVER_PARAMS = json.load(f) # load local server parameters
 
 LONG_RETRY_COUNT = 120
+REMOTE_NOTEBOOK_START_RETRY_MAX = 5
 HUB_MANAGER_IP_ADDRESS = get_local_ip_address()
 NOTEBOOK_SERVER_PORT = 4444
 WORKER_USERNAME  = SERVER_PARAMS["WORKER_USERNAME"]
@@ -153,7 +154,7 @@ class InstanceSpawner(Spawner):
                 # blocking calls should be wrapped in a Future
                 yield retry(instance.wait_until_running) #this call can occasionally fail, so we wrap it in a retry.
                 yield self.start_worker_server(instance, new_server=False)
-                self.log.debug("%s , %s" % (instance.private_ip_address, NOTEBOOK_SERVER_PORT))
+                self.log.debug("instance private ip address is %s, NOTEBOOK_SERVER_PORT is %s, user is %s" % (instance.private_ip_address, NOTEBOOK_SERVER_PORT, self.user.name))
                 # a longer sleep duration reduces the chance of a 503 or infinite redirect error (which a user can
                 # resolve with a page refresh). 10s seems to be a good inflection point of behavior
                 yield gen.sleep(10)
@@ -262,19 +263,20 @@ class InstanceSpawner(Spawner):
             comes first. """
         with settings(**FABRIC_DEFAULTS, host_string=ip_address_string):
             for i in range(attempts):
-                self.log.debug("function check_notebook_running for user %s, attempt %s..." % (self.user.name, i+1))
+                self.log.debug("function is_notebook_running for user %s, private ip %s, attempt %s..." % (self.user.name, ip_address_string, i+1))
                 output = yield run("ps -ef | grep jupyterhub-singleuser")
+                self.log.debug("output of command 'ps -ef | grep jupyterhub-singleuser' for user %s, private ip %s, is %s" % (self.user.name, ip_address_string, output))
                 for line in output.splitlines(): #
+                    self.log.debug("line looped over in for-loop in function is_notebook_running for user %s, private ip %s, is %s" % (self.user.name, ip_address_string, line))
                     #if "jupyterhub-singleuser" and NOTEBOOK_SERVER_PORT in line:
-                    if "jupyterhub-singleuser" and str(NOTEBOOK_SERVER_PORT)  in line:
-                        self.log.debug("the following notebook is definitely running:")
-                        self.log.debug(line)
+                    if "jupyterhub-singleuser" and str(NOTEBOOK_SERVER_PORT)  and str(self.user.name) and ip_address_string in line:
+                        self.log.debug("notebook for user %s, private ip %s, is definitely running:" % (self.user.name, ip_address_string))
+                        self.log.debug("line confirming that notebook is running for user %s, private ip %s, is %s" % (self.user.name, ip_address_string, line))
                         return True
-                self.log.debug("Notebook for user %s not running..." % self.user.name)
-                yield gen.sleep(1)
-            self.log.error("Notebook for user %s is not running." % self.user.name)
+                self.log.debug("Notebook for user %s, private ip %s, not running..." % (self.user.name, ip_address_string))
+                yield gen.sleep(3)
+            self.log.error("Notebook for user %s, private ip %s, is not running." % (self.user.name, ip_address_string))
             return False
-
 
     ###  Retun SSH_CONNECTION_FAILED if ssh connection failed
     @gen.coroutine
@@ -282,7 +284,9 @@ class InstanceSpawner(Spawner):
         """ Run a meaningless bash command (a comment) inside a retry statement. """
         self.log.debug("function wait_until_SSHable for user %s" % self.user.name)
         with settings(**FABRIC_DEFAULTS, host_string=ip_address_string):
+            self.log.debug("about to run SSHability command for user %s. max_retries for the command is set to %s" % (self.user.name, max_retries))
             ret = yield run("# waiting for ssh to be connectable for user %s..." % self.user.name, max_retries=max_retries)
+        self.log.debug("return value for SSHability command in function wait_until_SSHable, for user %s, is %s" % (self.user.name, ret))
         if ret == "RETRY_FAILED":
            ret = "SSH_CONNECTION_FAILED"
         return (ret)
@@ -323,12 +327,14 @@ class InstanceSpawner(Spawner):
         # self.user.server.port = NOTEBOOK_SERVER_PORT
         try:
             # Wait for server to finish booting...
+            self.log.debug("\n\n\n\nabout to call function wait_until_SSHable for user %s\n\n\n\n" % self.user.name)
             wait_result = yield self.wait_until_SSHable(instance.private_ip_address,max_retries=LONG_RETRY_COUNT)
+            self.log.debug("value for variable wait_result in function start_worker_server, for user %s, is %s" % (self.user.name, wait_result))
+            if wait_result == "SSH_CONNECTION_FAILED":
+                raise Exception("Server start failed. Please retry by clicking on 'Home' then 'Start My Server'.")
             #start notebook
-            self.log.error("\n\n\n\nabout to check if notebook is running before launching\n\n\n\n")
-            notebook_running = yield self.is_notebook_running(instance.private_ip_address)
-            if not notebook_running:
-                yield self.remote_notebook_start(instance)
+            self.log.debug("\n\n\n\nabout to call function remote_notebook_start for user %s private ip %s\n\n\n\n" % (self.user.name, instance.private_ip_address))
+            yield self.remote_notebook_start(instance)
         except RemoteCmdExecutionError as e:
             # terminate instance and create a new one
             self.log.exception(e)
@@ -359,20 +365,25 @@ class InstanceSpawner(Spawner):
         for key in env:
             lenv = lenv + key + "=" + env[key] + " "
         # End setup environment
-        self.log.debug("function remote_server_start %s" % self.user.name)
+        self.log.debug("function remote_notebook_start %s" % self.user.name)
         worker_ip_address_string = instance.private_ip_address
         start_notebook_cmd = self.cmd + self.get_args()
         start_notebook_cmd = " ".join(start_notebook_cmd)
-        self.log.info("Starting user %s jupyterhub" % self.user.name)
+        self.log.info("Starting user %s private ip %s jupyterhub" % (self.user.name, worker_ip_address_string))
         with settings(user = self.user.name, key_filename = FABRIC_DEFAULTS["key_filename"],  host_string=worker_ip_address_string):
-             yield sudo("%s %s --user=%s --notebook-dir=/home/%s/ --allow-root > /tmp/jupyter.log 2>&1 &" % (lenv, start_notebook_cmd,self.user.name,self.user.name),  pty=False)
-        self.log.debug("just started the notebook for user %s, waiting." % self.user.name)
-        try:
-            self.user.settings[self.user.name] = instance.public_ip_address
-        except:
-            self.user.settings[self.user.name] = ""
+            yield sudo("%s %s --user=%s --notebook-dir=/home/%s/ --allow-root > /tmp/jupyter.log 2>&1 &" % (lenv, start_notebook_cmd,self.user.name,self.user.name),  pty=False)
+            self.log.debug("just started the notebook for user %s, private ip %s, waiting." % (self.user.name, worker_ip_address_string))
+            notebook_running = yield self.is_notebook_running(worker_ip_address_string, attempts=10)
+            self.log.debug("value for variable notebook_running in function remote_notebook_start for user %s private ip %s is %s" % (self.user.name, worker_ip_address_string, notebook_running))
+            num_remote_notebook_start_retries = 0
+            while not notebook_running and num_remote_notebook_start_retries < REMOTE_NOTEBOOK_START_RETRY_MAX:
+                yield sudo("%s %s --user=%s --notebook-dir=/home/%s/ --allow-root > /tmp/jupyter.log 2>&1 &" % (lenv, start_notebook_cmd,self.user.name,self.user.name),  pty=False)
+                self.log.debug("just retried to start the notebook for user %s, private ip %s. Attempt %s. Waiting..." % (self.user.name, worker_ip_address_string, num_remote_notebook_start_retries + 1))
+                yield gen.sleep(3) # Wait for 3 seconds before checking whether the notebook server started
+                notebook_running = yield self.is_notebook_running(worker_ip_address_string, attempts=10)
+                self.log.debug("value for variable notebook_running in function remote_notebook_start for user %s private ip %s is %s" % (self.user.name, worker_ip_address_string, notebook_running))
+                num_remote_notebook_start_retries += 1
         # self.notebook_should_be_running = True
-        yield self.is_notebook_running(worker_ip_address_string, attempts=30)
 
     @gen.coroutine
     def create_new_instance(self):
