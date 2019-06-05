@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 This sets up a JypyterHub cluster.  This script requires Python 2.7 due to Fabric
 not being Python 3 compatible
@@ -136,25 +136,27 @@ def setup_manager(server_params,config, manager_ip_address):
     run("cp /var/tmp/common_files/.bash_profile ~/")
     # Common installs: python 3
     sudo("apt-get -qq -y update")
-    #sudo("apt-get -qq -y install -q python3.4 python3-pip sqlite sysv-rc-conf", quiet=True)
-    sudo("apt-get -qq -y install -q python3-pip sqlite sysv-rc-conf", quiet=True)
-    sudo ("/usr/bin/pip3 install --force-reinstall --upgrade pip")
-    #sudo("easy_install3 pip", quiet=True)
-    sudo("pip3 --quiet install ipython nbgrader", quiet=True)
+
+    sudo("apt-get -qq -y install -q python3-pip sqlite", quiet=True)
+    sudo("pip3 install --upgrade pip")
+    sudo("apt-get -qq -y remove -q python3-pip")
+    sudo("hash -r")
+    #sudo("hash -d pip")
+
+    sudo("pip3 -q install ipython nbgrader", quiet=True)
     # Sets up jupyterhub components
     put("jupyterhub_files", remote_path="/var/tmp/")
     sudo("cp -r /var/tmp/jupyterhub_files /etc/jupyterhub")
-    # pip installs
     sudo("pip3 install --quiet -r /var/tmp/jupyterhub_files/requirements_jupyterhub.txt")
     # apt-get installs for jupyterhub
-    sudo("apt-get -qq -y install -q nodejs-legacy npm")
+    sudo("apt-get -qq -y install -q nodejs npm")
     # npm installs for the jupyterhub proxy
     sudo("npm install -q -g configurable-http-proxy")
     # move init script into place so we can have jupyterhub run as a "service".
     sudo("cp /var/tmp/jupyterhub_files/jupyterhub_service.sh /etc/init.d/jupyterhub")
     sudo("chmod +x /etc/init.d/jupyterhub")
     sudo("systemctl daemon-reload")
-    sudo("sysv-rc-conf --level 5 jupyterhub on")
+    sudo("systemctl enable jupyterhub")
     # Put the server_params dict into the environment
     sudo("echo '%s' > /etc/jupyterhub/server_config.json" % json.dumps(server_params))
     # Generate a token value for use in making authenticated calls to the jupyterhub api
@@ -184,21 +186,22 @@ def make_worker_ami(config, ec2, security_group_list):
     retry(run, "# waiting for ssh to be connectable...", max_retries=100)
 
     sudo("apt-get -qq -y update")
-    sudo("apt-get -qq -y install -q python python-setuptools python-dev")
-    sudo("easy_install pip")
-    sudo ("apt-get -qq -y install -q python3-pip sqlite sysv-rc-conf")
-    sudo ("pip3 install --force-reinstall --upgrade pip")
 
+    sudo("apt-get -qq -y install -q python python-dev python-pip")
+    sudo("pip install --upgrade pip")
+    sudo("apt-get -qq -y remove -q python-pip")
+    sudo("hash -r")
 
+    sudo("apt-get -qq -y install -q python3-pip sqlite")
+    sudo("pip3 install --upgrade pip")
+    sudo("apt-get -qq -y remove -q python3-pip")
+    sudo("hash -r")
 
     put("jupyterhub_files/requirements_jupyterhub.txt", remote_path="/var/tmp/")
-    # pip installs
     sudo("pip3 install --quiet -r /var/tmp/requirements_jupyterhub.txt")
-    # apt-get installs for jupyterhub
 
-
-    sudo("pip3 --quiet install ipython jupyter ipykernel nbgrader")
-    sudo("pip2 install ipykernel --upgrade")
+    sudo("pip3 -q install ipython jupyter ipykernel nbgrader")
+    sudo("pip2 -q install ipykernel --upgrade")
 
     # register Python 3 and 2 kernel
     sudo("python3 -m ipykernel install")
@@ -338,7 +341,8 @@ def validate_config():
     """ Checks key file permissions """
     if config.ignore_permissions == "false":
         permissions = oct(os.stat(KEY_PATH).st_mode % 2 ** 9)
-        if permissions[2:] != "600":
+        #if permissions[2:] != "600":   <--- And update this
+        if permissions[1:] != "600":
             print("Your key file permissions are %s, they need to be (0)600 "
                   "or else the configuration script will not be able to connect "
                   "to the server.\n"
