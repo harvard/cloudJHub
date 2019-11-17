@@ -1,7 +1,7 @@
 AWS_ACCESS_KEY_ID = "changeme"
 AWS_SECRET_KEY = "changeme"
-KEY_NAME = "aws.pem changeme"
-KEY_PATH = "~/.ssh/%s" % KEY_NAME
+KEY_NAME = "changeme"
+KEY_PATH = "~/.ssh/%s.pem" % KEY_NAME
 # This is the Instance Profile ARN for the IAM Role of the manager node
 MANAGER_IAM_ROLE = "changeme" #INSTANCE PROFILE ARN; example "arn:aws:iam::XXXXXXXXXXXX:instance-profile/XXXXXXXXXXXX"
 VPC_ID = "changeme" #vpc-NUMBERS_LETTERS
