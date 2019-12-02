@@ -34,7 +34,6 @@ WORKER_USERNAME  = SERVER_PARAMS["WORKER_USERNAME"]
 
 WORKER_TAGS = [ #These tags are set on every server created by the spawner
     {"Key": "Name", "Value": SERVER_PARAMS["WORKER_SERVER_NAME"]},
-    {"Key": "Owner", "Value": SERVER_PARAMS["WORKER_SERVER_OWNER"]},
     {"Key": "Creator", "Value": SERVER_PARAMS["WORKER_SERVER_OWNER"]},
     {"Key": "Jupyter Cluster", "Value": SERVER_PARAMS["JUPYTER_CLUSTER"]},
     {"Key": "environment", "Value": SERVER_PARAMS["ENVIRONMENT"]},
@@ -438,7 +437,7 @@ class InstanceSpawner(Spawner):
         yield retry(instance.wait_until_exists)
         # add server tags; tags cannot be added until server exists
         yield retry(instance.create_tags, Tags=WORKER_TAGS)
-        yield retry(instance.create_tags, Tags=[{"Key": "User", "Value": self.user.name}])
+        yield retry(instance.create_tags, Tags=[{"Key": "owner", "Value": self.user.name}])
         # start server
         # blocking calls should be wrapped in a Future
         yield retry(instance.wait_until_running)
