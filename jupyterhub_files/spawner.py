@@ -247,7 +247,7 @@ class InstanceSpawner(Spawner):
                     yield self.kill_instance(instance)
                     return "Instance Hang"
                 else:
-                    notebook_running = yield self.is_notebook_running(instance.private_ip_address, attempts=1)
+                    notebook_running = yield self.is_notebook_running(instance.private_ip_address, attempts=3)
                     if notebook_running:
                         self.log_user("poll: notebook is running")
                         return None #its up!

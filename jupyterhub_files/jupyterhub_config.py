@@ -48,7 +48,7 @@ with open("/etc/jupyterhub/api_token.txt", 'r') as f:
     api_token = f.read().strip()
 c.JupyterHub.api_tokens = {api_token:"__tokengeneratoradmin"}
 
-c.Spawner.poll_interval = 10
+c.Spawner.poll_interval = 15
 c.Spawner.http_timeout = 300
 c.Spawner.start_timeout = 300
 
