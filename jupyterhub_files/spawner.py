@@ -2,11 +2,10 @@ import json
 import logging
 import socket
 import boto3
-from fabric.api import env, sudo as _sudo, run as _run
-from fabric.operations import put as _put
-from fabric.context_managers import settings
-from fabric.exceptions import NetworkError
-from paramiko.ssh_exception import SSHException, ChannelException
+
+from fabric2 import Connection
+from invoke.exceptions import UnexpectedExit, CommandTimedOut
+from paramiko.ssh_exception import SSHException, ChannelException, NoValidConnectionsError
 from botocore.exceptions import ClientError, WaiterError
 from datetime import datetime
 from tornado import gen, web
@@ -31,7 +30,6 @@ HUB_MANAGER_IP_ADDRESS = get_local_ip_address()
 NOTEBOOK_SERVER_PORT = 4444
 WORKER_USERNAME  = SERVER_PARAMS["WORKER_USERNAME"]
 
-
 WORKER_TAGS = [ #These tags are set on every server created by the spawner
     {"Key": "Name", "Value": SERVER_PARAMS["WORKER_SERVER_NAME"]},
     {"Key": "Creator", "Value": SERVER_PARAMS["WORKER_SERVER_OWNER"]},
@@ -54,29 +52,20 @@ logging.basicConfig(level=logging.INFO)
 
 
 #Global Fabric config
+FABRIC_KEY_FILENAME = "/home/%s/.ssh/%s" % (SERVER_PARAMS["SERVER_USERNAME"], SERVER_PARAMS["KEY_NAME"])
+FABRIC_CONNECT_KWARGS = {
+    "key_filename": FABRIC_KEY_FILENAME,
+}
 class RemoteCmdExecutionError(Exception): pass
-env.abort_exception = RemoteCmdExecutionError
-env.abort_on_prompts = True
-FABRIC_DEFAULTS = {"user":SERVER_PARAMS["WORKER_USERNAME"],
-                   "key_filename":"/home/%s/.ssh/%s" % (SERVER_PARAMS["SERVER_USERNAME"], SERVER_PARAMS["KEY_NAME"])}
-
-FABRIC_QUIET = True
-#FABRIC_QUIET = False
-# Make Fabric only print output of commands when logging level is greater than warning.
 
 @gen.coroutine
-def sudo(*args, **kwargs):
-    ret = yield retry(_sudo, *args, **kwargs, quiet=FABRIC_QUIET)
+def sudo(connection, *args, **kwargs):
+    ret = yield retry(connection.sudo, *args, **kwargs, hide=True)
     return ret
 
 @gen.coroutine
-def run(*args, **kwargs):
-    ret = yield retry(_run, *args, **kwargs, quiet=FABRIC_QUIET)
-    return ret
-
-@gen.coroutine
-def put(*args, **kwargs):
-    ret = yield retry(_put, *args, **kwargs)
+def run(connection, *args, **kwargs):
+    ret = yield retry(connection.run, *args, **kwargs, hide=True)
     return ret
 
 @gen.coroutine
@@ -91,11 +80,13 @@ def retry(function, *args, **kwargs):
         try:
             ret = yield thread_pool.submit(function, *args, **kwargs)
             return ret
-        except (ClientError, WaiterError, NetworkError, RemoteCmdExecutionError, EOFError, SSHException, ChannelException) as e:
-            #EOFError can occur in fabric
+        except (ClientError, WaiterError, CommandTimedOut, SSHException, ChannelException, NoValidConnectionsError) as e:
             logger.error("Failure in %s with args %s and kwargs %s" % (function.__name__, args, kwargs))
             logger.info("retrying %s, (~%s seconds elapsed)" % (function.__name__, attempt * 3))
             yield gen.sleep(timeout)
+        except UnexpectedExit as e:
+            logger.exception(e)
+            raise RemoteCmdExecutionError(str(e))
     else:
         logger.error("Failure in %s with args %s and kwargs %s" % (function.__name__, args, kwargs))
         yield gen.sleep(0.1) #this line exists to allow the logger time to print
@@ -270,20 +261,21 @@ class InstanceSpawner(Spawner):
         """ Checks if jupyterhub/notebook is running on the target machine, returns True if Yes, False if not.
             If an attempts count N is provided the check will be run N times or until the notebook is running, whichever
             comes first. """
-        with settings(**FABRIC_DEFAULTS, host_string=ip_address_string):
+        with Connection(user=WORKER_USERNAME, host=ip_address_string, connect_kwargs=FABRIC_CONNECT_KWARGS) as c:
             for i in range(attempts):
                 log_msg = "is_notebook_running(%s) attempt: %s/%s" % (ip_address_string, i+1, attempts)
                 self.log_user(log_msg, level=logging.DEBUG)
-                output = yield run("nice -5 pgrep -a -f jupyterhub-singleuser") # replaces: ps -ef | grep jupyterhub-singleuser
+                result = yield run(c, "nice -5 pgrep -a -f jupyterhub-singleuser", timeout=2) # replaces: ps -ef | grep jupyterhub-singleuser
+                output = result.stdout
                 self.log_user("%s output: %s" % (log_msg, output), level=logging.DEBUG)
-                for line in output.splitlines(): #
+                for line in output.splitlines():
                     #if "jupyterhub-singleuser" and NOTEBOOK_SERVER_PORT in line:
                     if "jupyterhub-singleuser" and str(NOTEBOOK_SERVER_PORT)  and str(self.user.name) and ip_address_string in line:
                         self.log_user("%s check completed, is running" % log_msg, level=logging.DEBUG)
                         return True
                 self.log_user("%s check in progress, not running" % log_msg, level=logging.DEBUG)
                 yield gen.sleep(3)
-            self.log_user("%s check completed, not running" % log_msg, level=logging.DEBUG)
+            self.log_user("%s check completed, not running" % log_msg, level=logging.INFO)
             return False
 
     ###  Retun SSH_CONNECTION_FAILED if ssh connection failed
@@ -291,9 +283,9 @@ class InstanceSpawner(Spawner):
     def wait_until_SSHable(self, ip_address_string, max_retries=1):
         """ Run a meaningless bash command (a comment) inside a retry statement. """
         self.log_user("wait_until_SSHable()")
-        with settings(**FABRIC_DEFAULTS, host_string=ip_address_string):
+        with Connection(user=WORKER_USERNAME, host=ip_address_string, connect_kwargs=FABRIC_CONNECT_KWARGS) as c:
             self.log_user("wait_until_SSHable max_retries:%s" % max_retries, level=logging.DEBUG)
-            ret = yield run("# waiting for ssh to be connectable for user %s..." % self.user.name, max_retries=max_retries)
+            ret = yield run(c, "# waiting for ssh to be connectable for user %s..." % self.user.name, max_retries=max_retries)
         self.log_user("wait_until_SSHable completed return: %s" % ret, level=logging.DEBUG)
         if ret == "RETRY_FAILED":
            ret = "SSH_CONNECTION_FAILED"
@@ -385,14 +377,14 @@ class InstanceSpawner(Spawner):
         start_notebook_cmd = self.cmd + self.get_args()
         start_notebook_cmd = " ".join(start_notebook_cmd)
         self.log_user("remote_notebook_start private ip: %s" % worker_ip_address_string)
-        with settings(user = self.user.name, key_filename = FABRIC_DEFAULTS["key_filename"],  host_string=worker_ip_address_string):
-            yield sudo("%s %s --user=%s --notebook-dir=/home/%s/ --allow-root > /tmp/jupyter.log 2>&1 &" % (lenv, start_notebook_cmd,self.user.name,self.user.name),  pty=False)
+        with Connection(user=self.user.name, host=worker_ip_address_string, connect_kwargs=FABRIC_CONNECT_KWARGS) as c:
+            yield sudo(c, "%s %s --user=%s --notebook-dir=/home/%s/ --allow-root > /tmp/jupyter.log 2>&1 &" % (lenv, start_notebook_cmd,self.user.name,self.user.name),  pty=False)
             self.log_user("remote_notebook_start private ip: %s, waiting." % worker_ip_address_string)
             notebook_running = yield self.is_notebook_running(worker_ip_address_string, attempts=10)
             self.log_user("remote_notebook_start private ip: %s, running: %s" % (worker_ip_address_string, notebook_running))
             num_remote_notebook_start_retries = 0
             while not notebook_running and num_remote_notebook_start_retries < REMOTE_NOTEBOOK_START_RETRY_MAX:
-                yield sudo("%s %s --user=%s --notebook-dir=/home/%s/ --allow-root > /tmp/jupyter.log 2>&1 &" % (lenv, start_notebook_cmd,self.user.name,self.user.name),  pty=False)
+                yield sudo(c, "%s %s --user=%s --notebook-dir=/home/%s/ --allow-root > /tmp/jupyter.log 2>&1 &" % (lenv, start_notebook_cmd,self.user.name,self.user.name),  pty=False)
                 self.log_user("remote_notebook_start private ip: %s, retry attempt %s/%s. waiting..." % (worker_ip_address_string, num_remote_notebook_start_retries + 1, REMOTE_NOTEBOOK_START_RETRY_MAX))
                 yield gen.sleep(3) # Wait for 3 seconds before checking whether the notebook server started
                 notebook_running = yield self.is_notebook_running(worker_ip_address_string, attempts=10)
