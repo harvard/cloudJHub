@@ -5,6 +5,7 @@ python-dateutil
 escapism
 cronutils
 fabric3
+fabric2==2.5.0
 pytz
 
 # optional; as needed for authentication
