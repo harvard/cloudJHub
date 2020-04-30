@@ -330,7 +330,7 @@ def validate_config():
     if config.ignore_permissions == "false":
         permissions = oct(os.stat(KEY_PATH).st_mode % 2 ** 9)
         #if permissions[2:] != "600":   <--- And update this
-	if permissions[1:] != "600":
+        if permissions[1:] != "600":
             print("Your key file permissions are %s, they need to be (0)600 "
                   "or else the configuration script will not be able to connect "
                   "to the server.\n"
