@@ -1,0 +1,58 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: AWS CloudFormation Template to create a role for the jupyterhub manager(s)
+Resources:
+  jupyterhubrole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - ec2.amazonaws.com
+            Action:
+              - 'sts:AssumeRole'
+      Path: /
+      Policies:
+        - PolicyName: !Sub JupyterHub-Manager-policy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              - Action:
+                  - 'ec2:Describe*'
+                  - 'ec2:CreateImage'
+                  - 'ec2:CreateSnapshot'
+                  - 'ec2:CreateTags'
+                  - 'ec2:CreateVolume'
+                  - 'ec2:ModifyInstanceAttribute'
+                  - 'ec2:RunInstances'
+                  - 'ec2:StartInstances'
+                  - 'ec2:StopInstances'
+                  - 'ec2:AttachVolume'
+                Effect: Allow
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'logs:CreateLogGroup'
+                  - 'logs:CreateLogStream'
+                  - 'logs:PutLogEvents'
+                  - 'logs:DescribeLogStreams'
+                Resource:
+                  - 'arn:aws:logs:*:*:*'
+      RoleName: !Sub JupyterHub-Manager-Role
+  RootInstanceProfile:
+    Type: 'AWS::IAM::InstanceProfile'
+    Properties:
+      Path: /
+      Roles:
+        - !Ref jupyterhubrole
+      InstanceProfileName: !Sub JupyterHub-Manager-Profile
+Outputs:
+  Profilearn:
+    Description: Instance profile name of Jupyterhub-Manager-Profile
+    Value: !GetAtt 
+      - RootInstanceProfile
+      - Arn
+    Export:
+      Name: !Sub JupyterHub-Manager-Profile

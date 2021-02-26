@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
 This sets up a JypyterHub cluster.  This script requires Python 2.7 due to Fabric
 not being Python 3 compatible
@@ -18,8 +18,9 @@ import os
 import sys
 from time import sleep
 from botocore.exceptions import ClientError, WaiterError
-from fabric.api import env, run, put, sudo
-from fabric.exceptions import NetworkError
+from paramiko.ssh_exception import NoValidConnectionsError
+from fabric2 import Connection
+from patchwork.transfers import rsync
 
 from secure import (AWS_ACCESS_KEY_ID, AWS_SECRET_KEY, KEY_NAME, KEY_PATH,
                     MANAGER_IAM_ROLE, VPC_ID)
@@ -35,10 +36,6 @@ with open("launch_cluster/instance_config.json", "r") as f:
     CONFIG_DEFAULTS = json.load(f)
 
 class RemoteCmdExecutionError(Exception): pass
-
-#global fabric config
-env.abort_exception = RemoteCmdExecutionError
-env.abort_on_prompts = True
 
 
 def launch_manager(config):
@@ -71,19 +68,18 @@ def launch_manager(config):
         {"Key": "Owner", "Value": config.server_owner},
         {"Key": "Creator", "Value": config.server_owner},
         {"Key": "Jupyter Cluster", "Value": config.cluster_name},
+        {"Key": "platform", "Value": config.platform},
+        {"Key": "environment", "Value": config.environment},
+        {"Key": "product", "Value": config.cluster_name}
     ]
     instance.wait_until_exists()
     instance.wait_until_running()
     instance.create_tags(Tags=tags)
-    
-    # Configure fabric
-    env.host_string = instance.public_ip_address
-    env.key_filename = KEY_PATH
-    env.user = config.server_username
 
     # Wait for server to finish booting (literally keep trying until you can
     # successfully run a command on the server via ssh)
-    retry(run, "# waiting for ssh to be connectable...", max_retries=100)
+    with Connection(host=instance.public_ip_address, user=config.server_username, connect_kwargs={"key_filename": KEY_PATH}) as connection:
+        retry(connection.run, "# waiting for ssh to be connectable...", max_retries=100)
 
     # These parameters will be used by the manager to launch a worker
     worker_server_name = "JUPYTER_HUB_%s_%s_WORKER" % (availability_zone.split("-")[-1], config.cluster_name)
@@ -106,10 +102,13 @@ def launch_manager(config):
         "JUPYTER_MANAGER_IP": instance.public_ip_address,
         "USER_HOME_EBS_SIZE": config.user_home_ebs_size,
         "MANAGER_IP_ADDRESS": str(instance.private_ip_address),
+        "ENVIRONMENT": config.environment,
+        "PLATFORM": config.platform
     }
 
     # Setup the common files and settings between manager and worker.
-    setup_manager(server_params, config, instance.private_ip_address)
+    with Connection(host=instance.public_ip_address, user=config.server_username, connect_kwargs={"key_filename": KEY_PATH}) as connection:
+        setup_manager(connection, server_params, config, instance.private_ip_address)
 
     # For security, close port 22 on manager security group to prevent SSH access to manager host
     # logger.info("Closing port 22 on manager")
@@ -119,46 +118,46 @@ def launch_manager(config):
     print("Launch script done.")
 
 
-def setup_manager(server_params,config, manager_ip_address):
+def setup_manager(connection, server_params,config, manager_ip_address):
     """ Sets up the files that are common to both workers and the manager,
         runs before worke and jupyterhub setup. """
-    put("common_files", remote_path="/var/tmp/")
+    rsync(connection, "common_files", "/var/tmp")
     # upload key to manager for usage of SSHing into worker servers
-    put(KEY_PATH, remote_path="/home/%s/.ssh/%s" % (server_params["SERVER_USERNAME"], KEY_NAME))
-    sudo("chmod 600 /home/%s/.ssh/%s" % (server_params["SERVER_USERNAME"], KEY_NAME))
+    connection.put(KEY_PATH, remote="/home/%s/.ssh/%s" % (server_params["SERVER_USERNAME"], KEY_NAME))
+    connection.sudo("chmod 600 /home/%s/.ssh/%s" % (server_params["SERVER_USERNAME"], KEY_NAME))
     # bash environment configuration files (for devs and admins)worker_security_group
-    run("cp /var/tmp/common_files/.inputrc ~/")
-    run("cp /var/tmp/common_files/.bash_profile ~/")
+    connection.run("cp /var/tmp/common_files/.inputrc ~/")
+    connection.run("cp /var/tmp/common_files/.bash_profile ~/")
     # Common installs: python 3
-    sudo("apt-get -qq -y update")
-    #sudo("apt-get -qq -y install -q python3.4 python3-pip sqlite sysv-rc-conf", quiet=True)
-    sudo("apt-get -qq -y install -q python3-pip sqlite sysv-rc-conf", quiet=True)
-    sudo ("/usr/bin/pip3 install --force-reinstall --upgrade pip")
-    #sudo("easy_install3 pip", quiet=True)
-    sudo("pip3 --quiet install ipython nbgrader", quiet=True)
+    connection.sudo("sh -c \"apt-get -y update && sleep 15 && apt-get install -y python3-pip sqlite\"")
+    connection.sudo("pip3 install --upgrade pip")
+    connection.sudo("apt-get -qq remove -q python3-pip")
+    connection.sudo("sh -c \"hash -r\"")
+    #connection.run("hash -d pip")
+
+    connection.sudo("pip3 -q install ipython nbgrader", hide=True)
     # Sets up jupyterhub components
-    put("jupyterhub_files", remote_path="/var/tmp/")
-    sudo("cp -r /var/tmp/jupyterhub_files /etc/jupyterhub")
-    # pip installs
-    sudo("pip3 install --quiet -r /var/tmp/jupyterhub_files/requirements_jupyterhub.txt")
+    rsync(connection, "jupyterhub_files", "/var/tmp")
+    connection.sudo("cp -r /var/tmp/jupyterhub_files /etc/jupyterhub")
+    connection.sudo("pip3 install --quiet -r /var/tmp/jupyterhub_files/requirements_jupyterhub.txt")
     # apt-get installs for jupyterhub
-    sudo("apt-get -qq -y install -q nodejs-legacy npm")
+    connection.sudo("apt-get -qq install -q nodejs npm")
     # npm installs for the jupyterhub proxy
-    sudo("npm install -q -g configurable-http-proxy")
+    connection.sudo("npm install -q -g configurable-http-proxy")
     # move init script into place so we can have jupyterhub run as a "service".
-    sudo("cp /var/tmp/jupyterhub_files/jupyterhub_service.sh /etc/init.d/jupyterhub")
-    sudo("chmod +x /etc/init.d/jupyterhub")
-    sudo("systemctl daemon-reload")
-    sudo("sysv-rc-conf --level 5 jupyterhub on")
+    connection.sudo("cp /var/tmp/jupyterhub_files/jupyterhub_service.sh /etc/init.d/jupyterhub")
+    connection.sudo("chmod +x /etc/init.d/jupyterhub")
+    connection.sudo("systemctl daemon-reload")
+    connection.sudo("systemctl enable jupyterhub")
     # Put the server_params dict into the environment
-    sudo("echo '%s' > /etc/jupyterhub/server_config.json" % json.dumps(server_params))
+    connection.run("sudo echo '%s' | sudo tee /etc/jupyterhub/server_config.json" % json.dumps(server_params))
     # Generate a token value for use in making authenticated calls to the jupyterhub api
     # Note: this value cannot be put into the server_params because the file is imported in our spawner
-    sudo("/usr/local/bin/jupyterhub token -f /etc/jupyterhub/jupyterhub_config.py __tokengeneratoradmin > /etc/jupyterhub/api_token.txt")
+    connection.sudo("sh -c \"/usr/local/bin/jupyterhub token -f /etc/jupyterhub/jupyterhub_config.py __tokengeneratoradmin > /etc/jupyterhub/api_token.txt\"")
     # start jupyterhub
-    sudo("service jupyterhub start", pty=False)
+    connection.sudo("service jupyterhub start", pty=False)
     # move our cron script into place
-    sudo("cp /etc/jupyterhub/jupyterhub_cron.txt /etc/cron.d/jupyterhub_cron")
+    connection.sudo("cp /etc/jupyterhub/jupyterhub_cron.txt /etc/cron.d/jupyterhub_cron")
     if not config.custom_worker_ami:
         logger.info("Manager server successfully launched. Please wait 15 minutes for the worker server AMI image to become available. No worker servers (and thus, no user sessions) can be launched until the AMI is available.")
     # TODO: generate ssl files and enable jupyterhub ssl
@@ -170,36 +169,33 @@ def make_worker_ami(config, ec2, security_group_list):
     instance.wait_until_exists()
     instance.wait_until_running()
 
-    # Configure fabric
-    env.host_string = instance.public_ip_address
-    env.key_filename = KEY_PATH
-    env.user = config.server_username
+    with Connection(host=instance.public_ip_address, user=config.server_username, connect_kwargs={"key_filename": KEY_PATH}) as connection:
+        # Wait for server to finish booting (keep trying until you can successfully run a command on the server via ssh)
+        retry(connection.run, "# waiting for ssh to be connectable...", max_retries=100)
 
-    # Wait for server to finish booting (keep trying until you can successfully run a command on the server via ssh)
-    retry(run, "# waiting for ssh to be connectable...", max_retries=100)
+        connection.sudo("apt-get -qq -y update")
 
-    sudo("apt-get -qq -y update")
-    sudo("apt-get -qq -y install -q python python-setuptools python-dev")
-    sudo("easy_install pip")
-    sudo ("apt-get -qq -y install -q python3-pip sqlite sysv-rc-conf")
-    sudo ("pip3 install --force-reinstall --upgrade pip")
+        connection.sudo("apt-get -qq -y install -q python python-dev python-pip")
+        connection.sudo("pip install --upgrade pip")
+        connection.sudo("apt-get -qq -y remove -q python-pip")
+        connection.sudo("hash -r")
 
+        connection.sudo("apt-get -qq -y install -q python3-pip sqlite")
+        connection.sudo("pip3 install --upgrade pip")
+        connection.sudo("apt-get -qq -y remove -q python3-pip")
+        connection.sudo("hash -r")
 
+        connection.put("jupyterhub_files/requirements_jupyterhub.txt", remote_path="/var/tmp/")
+        connection.sudo("pip3 install --quiet -r /var/tmp/requirements_jupyterhub.txt")
 
-    put("jupyterhub_files/requirements_jupyterhub.txt", remote_path="/var/tmp/")
-    # pip installs
-    sudo("pip3 install --quiet -r /var/tmp/requirements_jupyterhub.txt")
-    # apt-get installs for jupyterhub
+        connection.sudo("pip3 -q install ipython jupyter ipykernel nbgrader")
+        connection.sudo("pip2 -q install ipykernel --upgrade")
 
-
-    sudo("pip3 --quiet install ipython jupyter ipykernel nbgrader")
-    sudo("pip2 install ipykernel --upgrade")
-
-    # register Python 3 and 2 kernel
-    sudo("python3 -m ipykernel install")
-    sudo("python2 -m ipykernel install")
-    sudo("chmod 755 /mnt")
-    sudo("chown ubuntu /mnt")
+        # register Python 3 and 2 kernel
+        connection.sudo("python3 -m ipykernel install")
+        connection.sudo("python2 -m ipykernel install")
+        connection.sudo("chmod 755 /mnt")
+        connection.sudo("chown ubuntu /mnt")
 
     # Create AMI for workers
     logger.info("Creating worker AMI")
@@ -333,7 +329,8 @@ def validate_config():
     """ Checks key file permissions """
     if config.ignore_permissions == "false":
         permissions = oct(os.stat(KEY_PATH).st_mode % 2 ** 9)
-        if permissions[2:] != "600":
+        #if permissions[2:] != "600":   <--- And update this
+        if permissions[1:] != "600":
             print("Your key file permissions are %s, they need to be (0)600 "
                   "or else the configuration script will not be able to connect "
                   "to the server.\n"
@@ -375,7 +372,7 @@ def retry(function, *args, **kwargs):
         print (".", sys.stdout.flush())
         try:
             return function(*args, **kwargs)
-        except (ClientError, NetworkError, WaiterError) as e:
+        except (ClientError, NoValidConnectionsError, WaiterError) as e:
             logger.debug("retrying %s, (~%s seconds elapsed)" % (function, i * 3))
             sleep(timeout)
     logger.error("hit max retries on %s" % function)
@@ -397,3 +394,4 @@ if __name__ == "__main__":
     config = parser.parse_args()
     validate_config()
     launch_manager(config)
+

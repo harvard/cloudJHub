@@ -9,5 +9,7 @@
 "REGION": "us-east-1",
 "WORKER_USERNAME": "ubuntu",
 "SERVER_OWNER": "",
-"IGNORE_PERMISSIONS": "false"
+"IGNORE_PERMISSIONS": "false",
+"ENVIRONMENT": "production",
+"PLATFORM": "linux"
 }

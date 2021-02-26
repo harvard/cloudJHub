@@ -1,0 +1,139 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: AWS CloudFormation Template to create an EC2 instance. The EC2
+  instance will be used to launch jupyterhub manager. 
+  **WARNING** This template creates an Amazon EC2 instance. You will
+  be billed for the AWS resources used if you create a stack from this template.
+Parameters:
+  UserName:
+    Type: String
+    Default: ubuntu
+    AllowedValues:
+      - ubuntu
+  SSHPublicKey:
+    Type: String
+    Default: Insert your public key starts with ssh-rsa to login to the launcher machine
+  HostName:
+    Type: String
+    Default: 'jhub-launcher'
+  InstanceType:
+    Description: EC2 instance type
+    Type: String
+    Default: t2.micro
+    AllowedValues:
+      - t2.micro
+      - t2.small
+      - t2.medium
+    ConstraintDescription: must be a valid EC2 instance type.
+  AMI:
+    Description: AMI to create JH Launcher and JH Manager
+    Type: String
+    Default: ami-0f9cf087c1f27d9b1
+  ClusterName:
+    Type: String
+    Default: 'jupyterhub-test'
+  VPCID:
+    Description: VPC of the launcher and its security group
+    Type: 'AWS::EC2::VPC::Id'
+    ConstraintDescription: must be a VPC  where the SG and the launcher reside
+  ManagerSubnet:
+    Description: Subnet to host JH Launcher and JH Manager (should be one of the subnets belong to the VPCID selected)
+    Type: 'AWS::EC2::Subnet::Id'
+    ConstraintDescription: must be a subnet where this machine reside
+  ManagerProfile:
+    Description: Role assigned to the manager to empower the manager to create resources like the workers ec2s and the AMIs
+    Type: String
+    Default: "arn:aws:iam::XXXXXXXXXXXX:instance-profile/XXXXXXXXXXXX"
+    ConstraintDescription: "JupyterHub Manager profile ARN"
+  WorkersSubnet:
+    Description: Subnet to host JH worker instances (should be one of the subnets belong to the VPCID selected)
+    Type: 'AWS::EC2::Subnet::Id'
+    ConstraintDescription: must be a subnet where this machine reside
+  SecurityGroupCIDR:
+    Description: Security Group for the launcher EC2
+    Type: String
+    Default: '0.0.0.0/0'
+    ConstraintDescription: CIDR for the ingress in the launcher security group
+  LauncherInstanceProfileName:
+    Description: IAM role profile name for the launcher EC2
+    Type: String
+    Default: JupyterHub-Launcher-Profile
+    ConstraintDescription: "JupyterHub Launcher profile name "
+
+Resources:
+  sshJHlauncher:
+    Type: 'AWS::EC2::SecurityGroup'
+    Properties:
+      GroupName: !Sub ${AWS::StackName}-SecurityGroup
+      GroupDescription: SSH access to admin networks
+      VpcId: !Ref VPCID
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: !Ref SecurityGroupCIDR
+  EC2Instance:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Ref LauncherInstanceProfileName 
+      NetworkInterfaces:
+        - GroupSet:
+            - !Ref sshJHlauncher
+          AssociatePublicIpAddress: 'true'
+          DeviceIndex: '0'
+          DeleteOnTermination: 'true'
+          SubnetId: !Ref ManagerSubnet
+      ImageId: !Ref AMI
+      UserData:
+        Fn::Base64:
+          Fn::Sub:
+            - |
+              #!/bin/bash -xe
+              userdel -r ${USERNAME} 2>/dev/null
+              useradd -m -s /bin/bash ${USERNAME}
+              echo ${USERNAME} 'ALL=(ALL) NOPASSWD:ALL'>>/etc/sudoers.d/${USERNAME}
+              mkdir /home/${USERNAME}/.ssh
+              echo ${SSHPUBLICKEY} > /home/${USERNAME}/.ssh/authorized_keys
+              chown -R ${USERNAME}.${USERNAME} /home/${USERNAME}/.ssh
+              chmod 700 /home/${USERNAME}/.ssh
+              chmod 600 /home/${USERNAME}/.ssh/authorized_keys
+              apt-get update -y 
+              apt-get install git python-pip gcc python-dev libssl-dev   -y 
+              pip2 install --upgrade pip 
+              hostnamectl set-hostname  ${HOSTNAME} --static
+              /usr/bin/ssh-keyscan github.com 2>&1 | grep rsa > /root/.ssh/known_hosts
+              /usr/bin/git clone https://github.com/harvard/cloudJHub.git /opt/cloudJHub
+              /usr/local/bin/pip install -r /opt/cloudJHub/launch_cluster/requirements.txt
+              cat > /opt/secure.py << EOF
+              AWS_ACCESS_KEY_ID = ""
+              AWS_SECRET_KEY = ""
+              KEY_NAME = "${KEYNAME}"
+              KEY_PATH = "/home/${USERNAME}/.ssh/${KEYNAME}.pem"
+              MANAGER_IAM_ROLE = "${MANAGERROLE}"
+              VPC_ID = "${VPCID}"
+              EOF
+              cat > /opt/launch-cluster-cmd.sh << EOF
+              cd /opt/cloudJHub
+              launch_cluster/launch.py ${CLUSTERNAME} ${AMI} ${WORKERSSUBNET} ${MANAGERSUBNET}
+              EOF
+              cp /opt/secure.py /opt/cloudJHub/launch_cluster/
+              chmod +x /opt/launch-cluster-cmd.sh
+              chown -R ${USERNAME} /opt
+
+            - USERNAME: !Ref UserName
+              HOSTNAME: !Ref HostName
+              SSHPUBLICKEY: !Ref SSHPublicKey
+              VPCID: !Ref VPCID
+              AMI: !Ref AMI
+              MANAGERSUBNET: !Ref ManagerSubnet
+              MANAGERROLE: !Ref ManagerProfile
+              WORKERSSUBNET: !Ref WorkersSubnet
+              SECURITYGROUPCIDR: !Ref SecurityGroupCIDR
+              KEYNAME: "jupyterhub"
+              CLUSTERNAME: !Ref ClusterName
+Outputs:
+  InstanceId:
+    Description: InstanceId of the newly created EC2 instance
+    Value: !Ref EC2Instance
+
+

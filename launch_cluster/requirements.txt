@@ -1,4 +1,4 @@
 boto3
-fabric
+fabric2==2.5.0
 fabric3
-paramiko==2.4.0
+paramiko
