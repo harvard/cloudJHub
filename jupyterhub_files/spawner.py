@@ -434,6 +434,7 @@ class InstanceSpawner(Spawner):
                 SecurityGroupIds=SERVER_PARAMS["WORKER_SECURITY_GROUPS"],
                 BlockDeviceMappings=BDM,
                 UserData=user_data_script,
+                max_retries=30,
         )
         instance_id = reservation["Instances"][0]["InstanceId"]
         instance = yield retry(resource.Instance, instance_id)
