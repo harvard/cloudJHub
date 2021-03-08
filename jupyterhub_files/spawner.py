@@ -436,6 +436,8 @@ class InstanceSpawner(Spawner):
                 UserData=user_data_script,
                 max_retries=30,
         )
+        self.log_user("result of retry(ec2.run_instances): %s" % reservation)
+
         instance_id = reservation["Instances"][0]["InstanceId"]
         instance = yield retry(resource.Instance, instance_id)
         Server.new_server(instance_id, self.user.name)
