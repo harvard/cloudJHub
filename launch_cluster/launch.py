@@ -141,8 +141,10 @@ def setup_manager(connection, server_params,config, manager_ip_address):
     connection.sudo("cp -r /var/tmp/jupyterhub_files /etc/jupyterhub")
     connection.sudo("pip3 install --quiet -r /var/tmp/jupyterhub_files/requirements_jupyterhub.txt")
     # apt-get installs for jupyterhub
-    connection.sudo("apt-get -qq install -q nodejs npm")
+    connection.sudo("curl -fsSL https://deb.nodesource.com/setup_14.x | sudo -E bash -")
+    connection.sudo("apt-get -qq install nodejs")
     # npm installs for the jupyterhub proxy
+    connection.sudo("npm install -g npm@latest")
     connection.sudo("npm install -q -g configurable-http-proxy")
     # move init script into place so we can have jupyterhub run as a "service".
     connection.sudo("cp /var/tmp/jupyterhub_files/jupyterhub_service.sh /etc/init.d/jupyterhub")
