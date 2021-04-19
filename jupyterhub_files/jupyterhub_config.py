@@ -48,7 +48,7 @@ with open("/etc/jupyterhub/api_token.txt", 'r') as f:
     api_token = f.read().strip()
 c.JupyterHub.api_tokens = {api_token:"__tokengeneratoradmin"}
 
-c.Spawner.poll_interval = 10
+c.Spawner.poll_interval = 15
 c.Spawner.http_timeout = 300
 c.Spawner.start_timeout = 300
 
@@ -83,9 +83,9 @@ c.JupyterHub.authenticator_class	 = 'noauthenticator.NoAuthenticator'
 c.LocalAuthenticator.add_user_cmd	 = ['adduser', '-q', '--gecos', '""', '--disabled-password', '--force-badname']
 c.LocalAuthenticator.create_system_users = True
 
-# Add users to the admin list, the whitelist, and also record their user ids
+# Add users to the admin list, the allowed_users list, and also record their user ids
 c.Authenticator.admin_users	= admin		= set()
-c.Authenticator.whitelist	= whitelist	= set()
+c.Authenticator.allowed_users	= allowed_users	= set()
 if os.path.isfile('/etc/jupyterhub/userlist'):
     with open('/etc/jupyterhub/userlist') as f:
         for line in f:
@@ -93,7 +93,7 @@ if os.path.isfile('/etc/jupyterhub/userlist'):
                 continue
             parts = line.split()
             name = parts[0]
-            whitelist.add(name)
+            allowed_users.add(name)
             if len(parts) > 1 and parts[1] == 'admin':
                 admin.add(name)
 
